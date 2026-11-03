@@ -1,5 +1,29 @@
 # Website Update Log
 
+## 2026-11-03: Source audit, compact-role recognition, hours-only shifts, and original worker template
+
+### Order recognition and self-audit (parser version 10)
+
+- Root cause of the cleaner-order failure: common trade nouns were missing, the leading HK location was not normalized, and wage extraction was incorrectly coupled to recognizing the role. Market establishment descriptions were also absent from employer cues.
+- Added common trade/establishment vocabulary and independent wage evidence for unfamiliar compact role/pay headings. Uncertain titles stay empty and visible for review; wages, duties, employers, or ages are never invented to fill a form.
+- Added documented cases REC-013 through REC-015. The catalog now covers 15 error families plus the existing role/currency variants and negative examples.
+- Removed the separate Shift option from company forms and publication. Source shift descriptions and legacy shift values merge into Working Hours; existing records are not bulk rewritten.
+- Added a read-only audit of seven critical fields: position, employer, salary, gender, age, working hours, and duties. It retains source excerpts, flags missing or unsupported information, compares proposed/current values, and identifies conflicts by company code.
+- Audit runs in the authenticated browser after login. The audit dialog can refresh the full current order list, download a private report containing source orders, and enter the existing re-recognition preview. Audit and preview do not write business records. Reports are cleared on logout.
+- Production records remain private: the assistant has not independently retrieved the user's authenticated live dataset. A downloaded report can be supplied for manual, record-by-record review.
+
+### Worker registration
+
+- Restored the supplied original blank form background, A4 print coordinates, photo placement, language checks, and overflow appendices.
+- Updated date/selection/text controls while keeping existing worker keys, manual values, team storage, and version checks.
+- Reintroduced the supplied PDF text/OCR adapter with explicit review before saving and original-PDF versus edited-template preview. Files are limited to 20 MB and 1–20 pages.
+- Corrected legacy missing checkbox coordinates, CJK fitting, and adjacent PDF label extraction offsets. Fixed mobile field overflow.
+- Retained current authentication and shared persistence; did not import the old local-only storage or offline caching system.
+
+### Verification
+
+Parser regressions, source-provenance/no-fabrication cases, syntax checks, shared-account browser acceptance, read-only audit/report/preview checks, worker template/A4/appendix/import-adapter checks, and API/backup tests passed. External OCR accuracy and CDN availability for real filled PDFs still require deployment-specific review; the automated adapter test uses a deterministic PDF.js boundary.
+
 ## 2026-11-03: Whole-document recognition mechanism (parser version 8)
 
 - Replaced the old fall-through classifier with a shared source-span catalog and field assembly pipeline. Each meaningful fragment records its exact excerpt, UTF-16 range, field assignment, disposition, and reason.

@@ -80,7 +80,7 @@ assert.equal(P.splitOrders('岗位：厨师\n工资：HKD18000\n岗位：电工\
 for(const bullet of ['·','•','●','✅','👉','- ']){
  const raw=`新单\n视频面试\nCV998877HK工厂食品加工HK16888+\n${bullet}男，50岁内，粤语\n${bullet}10H，休4，轮班\n${bullet}住扣10%（必须住）\n${bullet}主要做急冻食品\n${bullet}能接受0-4度室温工作\n💰2K+2.64办证保险另计（劳务费800）`;
  const o=P.parse(raw,'ZY-26-1103-15');
- assert.equal(o.title,'食品加工');assert.equal(o.gender,'男');assert.equal(o.age,'50岁内');assert.equal(o.hours,'10H');assert.equal(o.salary,'HK16888+');assert.equal(o.code,'ZY-26-1103-15 CV');assert.match(o.workContent,/0-4度/);
+ assert.equal(o.title,'食品加工');assert.equal(o.gender,'男');assert.equal(o.age,'50岁内');assert.equal(o.hours,'10H；轮班');assert.equal(o.salary,'HK16888+');assert.equal(o.code,'ZY-26-1103-15 CV');assert.match(o.workContent,/0-4度/);
  assert.doesNotMatch(JSON.stringify({...o,raw:'',parsedSnapshot:'',recognitionAudit:''}),/2K|2\.64|800/);
 }
 for(const tail of ['22000+3500+1100','3.2w','💰2K+2.64办证保险另计']){

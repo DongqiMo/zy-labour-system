@@ -34,6 +34,6 @@ if __name__=='__main__':
         config=build(url,key)
     except (ValueError,OSError) as e:raise SystemExit(str(e))
     (root/'config.js').write_text('window.ZY_CONFIG='+json.dumps(config)+';\n')
-    policy="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' "+config['supabaseUrl']+" https://cdn.jsdelivr.net; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    policy="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' "+config['supabaseUrl']+" https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     (root/'_headers').write_text('/*\n  Cache-Control: no-store\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: DENY\n  Referrer-Policy: same-origin\n  Content-Security-Policy: '+policy+'\n')
     print('Public static configuration generated; no admin credentials included')

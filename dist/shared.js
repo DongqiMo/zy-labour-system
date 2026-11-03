@@ -25,7 +25,7 @@ async function enterWorkspace(data){
   orders=result.orders;revision=result.revision;
   $('#login')?.remove();$('aside').hidden=false;$('main').hidden=false;
   $('aside footer').innerHTML=`<span><span data-user-content>${esc(sessionUser.username)}</span> · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div>`;
-  worker={};editing=null;go('dashboard');lastSync=Date.now();
+  worker={};editing=null;go('dashboard');lastSync=Date.now();window.startBackgroundOrderAudit?.(orders);
 }
 async function logout(){try{await api('/api/logout',{method:'POST',body:{}});loginScreen('已退出登录')}catch(e){toast(e.message)}}
 async function accountDialog(){

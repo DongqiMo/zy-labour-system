@@ -7,108 +7,301 @@
       "problem": "Compact job/pay headers lost the wage and left a plus in the title.",
       "rootCause": "A whole line was consumed as a position before extracting its currency token.",
       "source": "餐饮集团~\n人力资源文员HK17770+\n·38岁内，本科男女，粤语英语，2年经验\n·8H，休4\n·住扣封顶20%\n·精通MS Office一般文书工作，包括档案存档、资料输入、影印、编写报告；处理办公室杂务，例如文件送递、银行入账；负责跟单及出报价单；接听电话\n💰2K+2.82办证保险另计（劳务费900）",
-      "expected": {"title":"人力资源文员","salary":"HKD17770+","employer":"餐饮集团","gender":"男女不限","age":"38岁内","hours":"8H","rest":"休4"},
-      "contains": {"requirements":["本科","2年经验","精通MS Office"],"workContent":["档案存档","资料输入","影印","出报价单","接听电话"],"notes":["住扣封顶20%"]},
-      "forbidden": ["2K","2.82","900","办证","劳务费"],
+      "expected": {
+        "title": "人力资源文员",
+        "salary": "HKD17770+",
+        "employer": "餐饮集团",
+        "gender": "男女不限",
+        "age": "38岁内",
+        "hours": "8H",
+        "rest": "休4"
+      },
+      "contains": {
+        "requirements": [
+          "本科",
+          "2年经验",
+          "精通MS Office"
+        ],
+        "workContent": [
+          "档案存档",
+          "资料输入",
+          "影印",
+          "出报价单",
+          "接听电话"
+        ],
+        "notes": [
+          "住扣封顶20%"
+        ]
+      },
+      "forbidden": [
+        "2K",
+        "2.82",
+        "900",
+        "办证",
+        "劳务费"
+      ],
       "warning": "休息周期",
       "excluded": "劳务费900"
     },
     {
-      "id":"REC-002",
-      "problem":"Numbered and decorated prose requirements were not classified.",
-      "rootCause":"Age/gender depended on labels or a male/female word at the start of a line.",
-      "source":"电工HK$21,600+\n●39岁以内，大专男女，略懂英文，3年经验\n●每天9小时\n●负责检查线路",
-      "expected":{"title":"电工","salary":"HKD21600+","gender":"男女不限","age":"39岁以内"},
-      "contains":{"requirements":["大专","3年经验"],"language":["略懂英文"],"workContent":["检查线路"]}
+      "id": "REC-002",
+      "problem": "Numbered and decorated prose requirements were not classified.",
+      "rootCause": "Age/gender depended on labels or a male/female word at the start of a line.",
+      "source": "电工HK$21,600+\n●39岁以内，大专男女，略懂英文，3年经验\n●每天9小时\n●负责检查线路",
+      "expected": {
+        "title": "电工",
+        "salary": "HKD21600+",
+        "gender": "男女不限",
+        "age": "39岁以内"
+      },
+      "contains": {
+        "requirements": [
+          "大专",
+          "3年经验"
+        ],
+        "language": [
+          "略懂英文"
+        ],
+        "workContent": [
+          "检查线路"
+        ]
+      }
     },
     {
-      "id":"REC-003",
-      "problem":"The word quotation caused legitimate office duties to be discarded.",
-      "rootCause":"Price filtering matched a keyword without checking whether it named a document or a charge.",
-      "source":"职位：文员\n工资：HKD18000\n要求：男，35岁以下\n工作时间：每天8小时\n工作内容：制作报价单、整理保险资料、录入费用报表；每周处理20份文件\n报价：32000元，办证另计",
-      "expected":{"title":"文员","salary":"HKD18000"},
-      "contains":{"workContent":["制作报价单","保险资料","费用报表","20份文件"]},
-      "forbidden":["32000","办证另计"],
-      "excluded":"32000"
+      "id": "REC-003",
+      "problem": "The word quotation caused legitimate office duties to be discarded.",
+      "rootCause": "Price filtering matched a keyword without checking whether it named a document or a charge.",
+      "source": "职位：文员\n工资：HKD18000\n要求：男，35岁以下\n工作时间：每天8小时\n工作内容：制作报价单、整理保险资料、录入费用报表；每周处理20份文件\n报价：32000元，办证另计",
+      "expected": {
+        "title": "文员",
+        "salary": "HKD18000"
+      },
+      "contains": {
+        "workContent": [
+          "制作报价单",
+          "保险资料",
+          "费用报表",
+          "20份文件"
+        ]
+      },
+      "forbidden": [
+        "32000",
+        "办证另计"
+      ],
+      "excluded": "32000"
     },
     {
-      "id":"REC-004",
-      "problem":"Fees, wages, and employee deductions were mixed together.",
-      "rootCause":"All monetary text was either retained together or removed together.",
-      "source":"岗位：司机\n性别：男\n工资：HK$22000+，津贴500\n奖金：合格后每月1500元\n备注：住宿扣2800；餐费扣款550；劳务费4200；上家全包价38000\n工作时间：每天9小时",
-      "contains":{"salary":["HKD22000+","津贴500","奖金：合格后每月1500元"],"notes":["住宿扣2800","餐费扣款550"]},
-      "forbidden":["4200","38000","上家全包"],
-      "excluded":"4200"
+      "id": "REC-004",
+      "problem": "Fees, wages, and employee deductions were mixed together.",
+      "rootCause": "All monetary text was either retained together or removed together.",
+      "source": "岗位：司机\n性别：男\n工资：HK$22000+，津贴500\n奖金：合格后每月1500元\n备注：住宿扣2800；餐费扣款550；劳务费4200；上家全包价38000\n工作时间：每天9小时",
+      "contains": {
+        "salary": [
+          "HKD22000+",
+          "津贴500",
+          "奖金：合格后每月1500元"
+        ],
+        "notes": [
+          "住宿扣2800",
+          "餐费扣款550"
+        ]
+      },
+      "forbidden": [
+        "4200",
+        "38000",
+        "上家全包"
+      ],
+      "excluded": "4200"
     },
     {
-      "id":"REC-005",
-      "problem":"Unknown source text vanished without being displayed for review.",
-      "rootCause":"Unhandled lines fell through the parser and the review view guessed provenance from final strings.",
-      "source":"候选资料另待核实\n【自定义条件】另行确认\n岗位：厨师\n性别：男\n工资：HKD19000\n工作时间：每天9小时",
-      "expected":{"title":"厨师","salary":"HKD19000"},
-      "unknown":["候选资料另待核实","【自定义条件】另行确认"],
-      "warning":"尚未分类"
+      "id": "REC-005",
+      "problem": "Unknown source text vanished without being displayed for review.",
+      "rootCause": "Unhandled lines fell through the parser and the review view guessed provenance from final strings.",
+      "source": "候选资料另待核实\n【自定义条件】另行确认\n岗位：厨师\n性别：男\n工资：HKD19000\n工作时间：每天9小时",
+      "expected": {
+        "title": "厨师",
+        "salary": "HKD19000"
+      },
+      "unknown": [
+        "候选资料另待核实",
+        "【自定义条件】另行确认"
+      ],
+      "warning": "尚未分类"
     },
     {
-      "id":"REC-006",
-      "problem":"Conflicting salaries were combined or the first one silently won.",
-      "rootCause":"Only selected salary labels were inspected for conflicts.",
-      "source":"岗位：司机\n性别：男\n工资：HKD18000\n月薪：HKD20000\n工作时间：每天9小时",
-      "expected":{"title":"司机","salary":""},
-      "conflict":"salary",
-      "warning":"多组薪资"
+      "id": "REC-006",
+      "problem": "Conflicting salaries were combined or the first one silently won.",
+      "rootCause": "Only selected salary labels were inspected for conflicts.",
+      "source": "岗位：司机\n性别：男\n工资：HKD18000\n月薪：HKD20000\n工作时间：每天9小时",
+      "expected": {
+        "title": "司机",
+        "salary": ""
+      },
+      "conflict": "salary",
+      "warning": "多组薪资"
     },
     {
-      "id":"REC-007",
-      "problem":"Gender words embedded in position names were treated as recruitment requirements.",
-      "rootCause":"Broad substring matching ignored the role and sentence context.",
-      "source":"岗位：男装店销售\n工资：HKD18000\n工作内容：接待男女顾客\n工作时间：每天9小时",
-      "expected":{"title":"男装店销售","gender":""},
-      "contains":{"workContent":["接待男女顾客"]},
-      "warning":"性别"
+      "id": "REC-007",
+      "problem": "Gender words embedded in position names were treated as recruitment requirements.",
+      "rootCause": "Broad substring matching ignored the role and sentence context.",
+      "source": "岗位：男装店销售\n工资：HKD18000\n工作内容：接待男女顾客\n工作时间：每天9小时",
+      "expected": {
+        "title": "男装店销售",
+        "gender": ""
+      },
+      "contains": {
+        "workContent": [
+          "接待男女顾客"
+        ]
+      },
+      "warning": "性别"
     },
     {
-      "id":"REC-008",
-      "problem":"Footer arithmetic leaked into requirements.",
-      "rootCause":"Only bare decimal numbers were filtered, not monetary expressions.",
-      "source":"岗位：厨师\n性别：男\n工资：HKD19500\n工作内容：准备食材【工作要\n求】至少2年经验\n工作时间：每天9小时\n23000+3200+1180",
-      "expected":{"salary":"HKD19500"},
-      "contains":{"workContent":["准备食材"],"requirements":["2年经验"]},
-      "forbidden":["23000","3200","1180"],
-      "excluded":"23000+3200+1180"
+      "id": "REC-008",
+      "problem": "Footer arithmetic leaked into requirements.",
+      "rootCause": "Only bare decimal numbers were filtered, not monetary expressions.",
+      "source": "岗位：厨师\n性别：男\n工资：HKD19500\n工作内容：准备食材【工作要\n求】至少2年经验\n工作时间：每天9小时\n23000+3200+1180",
+      "expected": {
+        "salary": "HKD19500"
+      },
+      "contains": {
+        "workContent": [
+          "准备食材"
+        ],
+        "requirements": [
+          "2年经验"
+        ]
+      },
+      "forbidden": [
+        "23000",
+        "3200",
+        "1180"
+      ],
+      "excluded": "23000+3200+1180"
     },
     {
-      "id":"REC-009",
-      "problem":"Price cleanup removed physical quantities and temperatures.",
-      "rootCause":"Numeric replacement did not distinguish amounts from working conditions.",
-      "source":"工厂食品加工HK17500+\n男，40岁内\n10H，休4\n工作内容：搬运20kg货物；能接受0-4度室温；操作500W设备\n备注：住扣10%（必须住）\n35000全包",
-      "expected":{"title":"食品加工","salary":"HKD17500+","gender":"男"},
-      "contains":{"workContent":["20kg","0-4度","500W"],"notes":["住扣10%"]},
-      "forbidden":["35000","全包"]
+      "id": "REC-009",
+      "problem": "Price cleanup removed physical quantities and temperatures.",
+      "rootCause": "Numeric replacement did not distinguish amounts from working conditions.",
+      "source": "工厂食品加工HK17500+\n男，40岁内\n10H，休4\n工作内容：搬运20kg货物；能接受0-4度室温；操作500W设备\n备注：住扣10%（必须住）\n35000全包",
+      "expected": {
+        "title": "食品加工",
+        "salary": "HKD17500+",
+        "gender": "男"
+      },
+      "contains": {
+        "workContent": [
+          "20kg",
+          "0-4度",
+          "500W"
+        ],
+        "notes": [
+          "住扣10%"
+        ]
+      },
+      "forbidden": [
+        "35000",
+        "全包"
+      ]
     },
     {
-      "id":"REC-010",
-      "problem":"Supplier letters were truncated or full supplier numbers appeared in the company release.",
-      "rootCause":"Identifier stripping ran before supplier-prefix extraction.",
-      "source":"岗位【SUPPLIER-20998888厨师】\n性别：女\n工资：HK$19,800+\n工作时间：每天9小时",
-      "expected":{"title":"厨师","code":"ZY-26-1103-90 SUPPLIER","salary":"HKD19800+","gender":"女"},
-      "forbidden":["20998888"]
+      "id": "REC-010",
+      "problem": "Supplier letters were truncated or full supplier numbers appeared in the company release.",
+      "rootCause": "Identifier stripping ran before supplier-prefix extraction.",
+      "source": "岗位【SUPPLIER-20998888厨师】\n性别：女\n工资：HK$19,800+\n工作时间：每天9小时",
+      "expected": {
+        "title": "厨师",
+        "code": "ZY-26-1103-90 SUPPLIER",
+        "salary": "HKD19800+",
+        "gender": "女"
+      },
+      "forbidden": [
+        "20998888"
+      ]
     },
     {
-      "id":"REC-011",
-      "problem":"A salary label spelling was missing and HK$ was split into HK and $.",
-      "rootCause":"Alias and currency token coverage were incomplete.",
-      "source":"[职位名称]货车司机\n[职位薪酬]HK$24600+\n[性别要求]男\n[年龄要求]45岁以下\n[工作时间]每天9小时",
-      "expected":{"title":"货车司机","salary":"HKD24600+","gender":"男","age":"45岁以下"}
+      "id": "REC-011",
+      "problem": "A salary label spelling was missing and HK$ was split into HK and $.",
+      "rootCause": "Alias and currency token coverage were incomplete.",
+      "source": "[职位名称]货车司机\n[职位薪酬]HK$24600+\n[性别要求]男\n[年龄要求]45岁以下\n[工作时间]每天9小时",
+      "expected": {
+        "title": "货车司机",
+        "salary": "HKD24600+",
+        "gender": "男",
+        "age": "45岁以下"
+      }
     },
     {
-      "id":"REC-012",
-      "problem":"Two positions sharing one wage were silently reduced to the first title.",
-      "rootCause":"Position candidates were ranked without a conflict check.",
-      "source":"岗位：厨师\n岗位：司机\n工资：HKD18000\n性别：男\n工作时间：每天9小时",
-      "expected":{"title":"","salary":"HKD18000"},
-      "conflict":"title",
-      "warning":"职位"
+      "id": "REC-012",
+      "problem": "Two positions sharing one wage were silently reduced to the first title.",
+      "rootCause": "Position candidates were ranked without a conflict check.",
+      "source": "岗位：厨师\n岗位：司机\n工资：HKD18000\n性别：男\n工作时间：每天9小时",
+      "expected": {
+        "title": "",
+        "salary": "HKD18000"
+      },
+      "conflict": "title",
+      "warning": "职位"
+    },
+    {
+      "id": "REC-013",
+      "problem": "Basic trade nouns and a leading HK location caused both the title and wage to disappear.",
+      "rootCause": "Compact wage extraction required an already-known role, and the role/employer vocabulary missed common worker and market terms.",
+      "source": "新单\n高龄看过来~~~~\n连锁菜市场\nHK清洁工HK14260+\n·55岁内，男女，粤语\n·10H，休4，轮班\n·住扣最高20%\n💰2K+2.87办证保险另计（劳务费950）",
+      "expected": {
+        "title": "清洁工",
+        "salary": "HKD14260+",
+        "employer": "连锁菜市场",
+        "gender": "男女不限",
+        "age": "55岁内",
+        "hours": "10H；轮班"
+      },
+      "contains": {
+        "notes": [
+          "住扣最高20%"
+        ]
+      },
+      "forbidden": [
+        "2.87",
+        "950",
+        "办证"
+      ],
+      "warning": "休息周期"
+    },
+    {
+      "id": "REC-014",
+      "problem": "An unfamiliar position also prevented an otherwise explicit currency amount from being extracted.",
+      "rootCause": "Role recognition and wage recognition were coupled instead of retaining independent evidence.",
+      "source": "HK工序协调专岗HK17320+\n男女，40岁内\n工作时间：每天9小时",
+      "expected": {
+        "title": "",
+        "salary": "HKD17320+",
+        "gender": "男女不限"
+      },
+      "unknown": [
+        "HK工序协调专岗HK17320+"
+      ],
+      "warning": "职位"
+    },
+    {
+      "id": "REC-015",
+      "problem": "Shift information had its own company field instead of being part of working hours.",
+      "rootCause": "The stored shift key and publication schema did not share the new hours-only representation.",
+      "source": "岗位：司机\n雇主：测试运输公司\n工资：HKD18000\n性别：男\n年龄：40岁以下\n工作时间：每天9小时\n班次：早班、晚班\n工作内容：运送货物",
+      "expected": {
+        "title": "司机",
+        "salary": "HKD18000"
+      },
+      "contains": {
+        "hours": [
+          "每天9小时",
+          "早班",
+          "晚班"
+        ],
+        "workContent": [
+          "运送货物"
+        ]
+      }
     }
   ]
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import '../dist/order-parser.js';
 const P=ZYOrderParser,catalog=JSON.parse(readFileSync('tests/fixtures/recognition-errors.json','utf8'));
-const businessKeys=['code','title','employer','salary','gender','age','language','hours','shift','rest','workContent','requirements','interview','notes'];
+const businessKeys=['code','title','employer','salary','gender','age','language','hours','rest','workContent','requirements','interview','notes'];
 function coverage(result){
  const raw=result.order.raw,covered=new Uint8Array(raw.length),ids=new Set();
  for(const entry of result.ledger){
@@ -40,3 +40,9 @@ for(const text of ['负责保险理赔，具备2年经验','制作费用报表�
 for(const amount of ['HKD35000','35000HKD','HK$35000','35000元','3.5w']){const record=P.parse('岗位：司机\n性别：男\n工资：HKD18000\n备注：保险'+amount+'；办证另计','ZY-26-1103-90');assert(!record.notes.includes('35000'));assert(!record.notes.includes('3.5w'));assert(!record.salary.includes('35000'));}
 const html=readFileSync('dist/index.html','utf8');assert(!/^(?:async )?function (?:autoParse|saveOrder|previewBatch|renderBatch|saveBatch|copyOrder)\(/m.test(html),'Duplicate inline handlers must not return');
 console.log(`PASS: ${catalog.cases.length} documented error families, 64 compact-role variants, complete span accounting, review confirmation invalidation and duplicate-handler guard`);
+
+const oldShift={hours:'每天9小时',shift:'轮班',salary:'18000',raw:'旧原单'};const shifted=P.present(oldShift);assert.equal(shifted.hours,'每天9小时；轮班');assert(!Object.hasOwn(shifted,'shift'));assert.equal(oldShift.shift,'轮班');assert.equal(P.parse('岗位：司机\n工资：18000\n班次：夜班','ZY-26-1103-90').hours,'夜班');
+// The audit uses private records in memory and does not manufacture absent facts.
+globalThis.window=globalThis;globalThis.loginScreen=()=>{};await import('../dist/order-audit.js');
+const sourceCase=catalog.cases.find(c=>c.id==='REC-013');const audit=ZYOrderAudit.inspect({id:'audit-synthetic',code:'ZY-26-1103-90 CV',raw:sourceCase.source,salary:'1',title:'旧职位'});assert(audit.missing.includes('workContent'));assert.equal(audit.candidate.workContent,'');assert.equal(audit.candidate.salary,'HKD14260+');assert(!audit.unsupported.length);assert(audit.changed.includes('salary'));assert(audit.sources.salary.length);
+console.log('PASS: shift merged into hours, read-only self-audit, field provenance and no invented duties');

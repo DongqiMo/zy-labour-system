@@ -34,10 +34,12 @@ The ledger records how text was handled; it is not a guarantee of semantic corre
 - Prefer explicit labels and their paragraph scope over unlabeled guesses. A role heading may contain an attached salary, so extracting the title must not consume or erase its wage.
 - Position excludes source IDs, wages, trailing salary plus signs, headcount, age/gender/language qualifiers, approval-only job names, interview instructions, and promotional headings.
 - Extract all supplier letters before stripping the full source ID. Company codes use `ZY-YY-MMDD-NN PREFIX`; suffixes do not reset base-code sequencing.
+- Extract explicit currency evidence even when an adjacent compact role is unfamiliar. An unknown role stays in review; it must not erase a valid wage or be guessed. Location shorthand before a role is separate from its actual name.
 - Extract age, education, gender, languages, and experience from prose summaries even when age or education appears first. Do not interpret gender embedded in a job name, customer description, or duty as a hiring restriction.
 - Explicit gender labels take precedence. Conflicting explicit values remain unresolved rather than defaulting to unrestricted. Final order gender uses only male, female, or unrestricted Chinese business values.
 - Distinguish skills/qualifications from operational duties. Unlabelled office-document activities remain duties. Known explicit duties/requirements paragraphs preserve author intent.
 - Employer headings include groups and common establishments. Do not invent a company name from a salary/job heading.
+- There is no separate company Shift field. Merge source/legacy shift descriptions into Working Hours, retaining the original description and avoiding duplicate wording.
 - Preserve language proficiency, interview preparation, bonus eligibility, accommodation requirements, and physical quantities. An unclear rest shorthand is retained and flagged, not converted to an invented monthly total.
 
 ## Financial contract
@@ -84,3 +86,7 @@ GitHub runs recognition checks on relevant pushes and pull requests. The Pages w
 Retained: shared-field schema, authenticated adapters, permissions, conflict-protected persistence, source archives, manual data, backup/restore, HKD formatting, salary/deduction distinction, supplier-prefix handling, and narrow legacy repairs.
 
 Removed/replaced: the food-processing-specific compact-header branch, the old line fall-through classifier, pre-classification deletion of unknown/financial lines, reverse-substring provenance guesses, and overridden inline single/batch/save/copy handlers. Do not restore them as a fallback: maintain one tested path.
+
+## Read-only seven-field self-audit
+
+`dist/order-audit.js` inspects authenticated shared orders by company code. It generates proposed fields from each source, checks provenance for position/employer/salary/gender/age/hours/duties, and lists missing information, unsupported values, conflicts, and differences from manual company fields. Missing facts stay empty; a title does not authorize inventing duties or an employer. Reports and source excerpts are private, cleared on logout, and never automatically applied to records. Opening a proposal uses the existing explicit preview/save flow with a fresh revision. Audits run after login and may be refreshed/downloaded for manual review. The assistant cannot claim a live-data audit without access to the authenticated dataset or its private export.

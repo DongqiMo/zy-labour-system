@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='8';
+ const VERSION='10';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?!\d+(?:\.\d+)?\s*(?:度|℃|°C))/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -27,7 +27,7 @@
   employer:['雇主名称','僱主名稱','公司名称','公司名稱','雇主','僱主','公司','单位','單位'],
   salary:['职位薪酬','職位薪酬','职位薪资','職位薪資','岗位薪酬','崗位薪酬','工资薪酬','工資薪酬','工资薪酬待遇','工資薪酬待遇','薪资待遇','薪資待遇','薪金待遇','薪酬待遇','工资待遇','工資待遇','薪资','薪資','工资','工資','薪金','薪酬','月薪','待遇'],
   gender:['性别要求','性別要求','招聘性别','招聘性別','性别','性別'],age:['年龄要求','年齡要求','年龄','年齡'],language:['语言要求','語言要求','语言','語言'],
-  hours:['工作时间','工作時間','上班时间','上班時間','时间安排','時間安排','工时','工時'],shift:['班次'],rest:['每月休息','月休','休息'],
+  hours:['工作时间','工作時間','上班时间','上班時間','时间安排','時間安排','工时','工時'],shift:['班次','排班','更次'],rest:['每月休息','月休','休息'],
   workContent:['工作内容','工作內容','工作职责','工作職責','主要工作','职责','職責'],
   requirements:['工作要求','任职要求','任職要求','基本要求','基本条件','基本條件','要求'],
   notes:['其他备注与费用','其他備註與費用','其他备注','其他備註','备注','備註','食宿安排','食宿','费用','費用'],interview:['面试方式','面試方式','面试时间','面試時間','面试','面試']
@@ -54,9 +54,9 @@
  }
  const generic=/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位(?:名称)?|職位(?:名稱)?|岗位|崗位|工种|工種)$/;
  const editorial=s=>cleanBrackets(sanitizeRaw(s)).replace(/^(?:更新|急单|急單|新增)\s*/,'').trim();
- const jobWords=/(?:师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工)/;
+ const jobWords=/(?:师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工|清洁工|清潔工|保洁员|保潔員|搬运工|搬運工|包装工|包裝工|洗碗工|杂工|雜工|售货员|售貨員|店员|店員|理货员|理貨員|收货员|收貨員|内勤|內勤|主管)/;
  function titleValue(value,explicit=false){
-  let text=editorial(value).replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
+  let text=editorial(value).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
   if(/^[（(]?\s*批文/.test(text))return '';
   text=text.replace(/[（(][^）)]*(?:简历|簡歷|视频|視頻|面试|面試|报名|報名|批文)[^）)]*[）)]/g,'');
   text=text.replace(/(?:HKD|HK\$|HK|港币|港幣|港元|USD|RMB|CNY|CAD|MOP|[$￥¥])\s*\d[\s\S]*$/i,'').trim();
@@ -224,8 +224,10 @@
  function rolePay(value){
   const text=stripOrdinal(value),token=/(?:HKD|HK\$|HK|港币|港幣|港元|USD|RMB|CNY|CAD|MOP|[$￥¥])\s*\d[\d,]*(?:\.\d+)?(?:\s*[-~～至]\s*\d[\d,]*(?:\.\d+)?)?\+?(?:\s*[/／](?:月|天|日|小时|小時))?/ig;
   for(const match of text.matchAll(token)){
-   const before=text.slice(0,match.index).replace(/^(?:HK|香港)?(?:工厂|工廠)(?=\S)/,'').trim();
-   const title=titleValue(before);if(title)return {title,pay:text.slice(match.index),main:match[0]};
+   const before=text.slice(0,match.index).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:HK|香港)?(?:工厂|工廠)(?=\S)/,'').trim();
+   const title=titleValue(before);
+   const compactCandidate=before.length>=2&&before.length<=30&&/[\u3400-\u9fff]/.test(before)&&!/[，,；;：:]/.test(before)&&!requirementCue.test(before)&&!dutyCue.test(before)&&!compensationPattern.test(before)&&!deductionPattern.test(before)&&!hasQuote(before)&&!hasUpstreamCharge(before);
+   if(title||compactCandidate)return {title,pay:text.slice(match.index),main:match[0]};
   }return null;
  }
  const ageExpression=/(?:\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]?(?:左右)?|\d{2}\s*[岁歲](?:以下|以内|以內|以上|内|內)?)/;
@@ -233,7 +235,7 @@
  const restExpression=/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m;
  const requirementCue=/精通|熟练|熟練|略懂|掌握|具备|具備|经验|經驗|学历|學歷|本科|大专|大專|大学|大學|中专|中專|高中|初中|认识|認識|需有|必须有|必須有|能吃苦|责任心|責任心|服从|服從|年龄|年齡/;
  const dutyCue=/负责|負責|协助|協助|主要做|能接受|处理|處理|接听|接聽|整理|操作|装卸|裝卸|盘点|盤點|存档|存檔|输入|輸入|影印|报告|報告|送递|送遞|入账|入賬|跟单|跟單|落单|落單|报价单|報價單|接待|收银|收銀|收钱|收錢|切肉|备料|備料|搬运|搬運/;
- const employerCue=/公司|集团|集團|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口/;
+ const employerCue=/公司|集团|集團|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口|菜市场|菜市場|超市|商场|商場|市场|市場|门店|門店|连锁店|連鎖店/;
  function catalogDocument(raw){
   const buckets={},titles=[],ledger=[],explicitGenders=[],inferredGenders=[];let section='',componentLabel='',current=null;
   const push=(key,value,reason='semantic')=>{if(value)(buckets[key]??=[]).push(value);if(current){current.fields=unique([...current.fields,key]);current.disposition='classified';current.reason=reason;}};
@@ -261,7 +263,7 @@
     if(!tag&&ledger.at(-2)?.reason==='section_heading'&&ledger.at(-2)?.fields.includes(section)&&['salary','age','hours','rest','language','gender','employer'].includes(section)){push(section,text,'label_value');if(section==='gender')explicitGenders.push(text);continue;}
     if(/^(?:新单|新單|更新|急单|急單|高龄看过来|高齡看過來)[🔥~～!！\s]*$/.test(cleanBrackets(text))){exclude('promotional_heading');continue;}
     const compact=rolePay(text);
-    if(compact&&(!key||key==='title')){title(compact.title,key==='title'?0:1);push('salary',compact.pay,'inline_role_and_pay');inferredGenders.push(summaryGender(text));section='';continue;}
+    if(compact&&(!key||key==='title')){if(compact.title)title(compact.title,key==='title'?0:1);push('salary',compact.pay,'inline_role_and_pay');if(!compact.title){current.disposition='review';current.reason='unknown_inline_role';}inferredGenders.push(summaryGender(text));section='';continue;}
     if(key==='title'){
      title(titleValue(text,true),0);if(!current.fields.length)current.reason='uncertain_title';
      const prep=text.match(/[（(]([^）)]*(?:视频|視頻|简历|簡歷|面试|面試)[^）)]*)[）)]/);if(prep)push('interview',prep[1],'interview_preparation');
@@ -333,14 +335,15 @@
    if(benefits>=0){noteParts.push(part.slice(benefits));part=part.slice(0,benefits);}
    return part.replace(/^[\s，,]+|[\s，,]+$/g,'');
   }).filter(Boolean).join('，');
-  o.shift=joined('shift')||input.match(/通宵更?|夜班|早班|轮班|輪班|晚班/)?.[0]||'';
+  o.shift=joined('shift')||unique(input.match(/通宵更?|夜班|早班|轮班|輪班|晚班|白班|白更|夜更/g)||[]).join('；');
   o.rest=joined('rest')||restMatch;
   o.workContent=joined('workContent');o.requirements=clauses(joined('requirements')).filter(part=>{if(compensationPattern.test(part)){noteParts.push(part);return false;}return true;}).join('；');o.interview=joined('interview');
   if(joined('approval'))noteParts.push('批文：'+joined('approval'));if(joined('location'))noteParts.push('工作地点：'+joined('location'));if(joined('contract'))noteParts.push('合约期限：'+joined('contract'));
   o.notes=unique(noteParts).join('；');
   const result=sanitizeCompany(o);
+  for(const entry of catalog.ledger)entry.fields=unique(entry.fields.map(key=>key==='shift'?'hours':key));
   result.recognitionAudit=JSON.stringify({version:VERSION,fragments:catalog.ledger});
-  result.parsedSnapshot=JSON.stringify(Object.fromEntries(['code','title','employer','salary','gender','age','language','hours','shift','rest','workContent','requirements','interview','notes'].map(key=>[key,result[key]||''])));
+  result.parsedSnapshot=JSON.stringify(Object.fromEntries(['code','title','employer','salary','gender','age','language','hours','rest','workContent','requirements','interview','notes'].map(key=>[key,result[key]||''])));
   return result;
  }
  function analyze(input,code=''){
@@ -359,7 +362,7 @@
  function reviewOrder(input,order){
   const fresh=parseOne(input,order.code||''),ledger=JSON.parse(fresh.recognitionAudit).fragments;
   const sources={},warnings=[];
-  for(const entry of ledger)if(['classified','conflict'].includes(entry.disposition))for(const key of entry.fields)(sources[key]??=[]).push(entry.text);
+  for(const entry of ledger)if(entry.fields.length)for(const key of entry.fields)(sources[key]??=[]).push(entry.text);
   for(const key of Object.keys(sources))sources[key]=unique(sources[key]);
   const unclassified=unique(ledger.filter(entry=>entry.disposition==='review').map(entry=>entry.text));
   const excluded=ledger.filter(entry=>entry.disposition==='excluded');
@@ -377,10 +380,11 @@
  function parse(input,code=''){const result=analyze(input,code);return result.order||{raw:sanitizeRaw(input),code,needsSplit:true,title:'',gender:'',salary:''}}
  function sanitizeCompany(order){
   const result={...order};
+  const shift=String(result.shift||'').trim();if(shift&&!String(result.hours||'').includes(shift))result.hours=unique([...clauses(result.hours),...clauses(shift)]).join('；');delete result.shift;
   const deductions=[];
   for(const key of ['requirements','workContent','hours','interview'])if(typeof result[key]==='string')result[key]=clauses(result[key]).filter(part=>{if(deductionPattern.test(part)&&!hasUpstreamCharge(part)&&!hasQuote(part)){deductions.push(part);return false;}return true;}).join('；');
   if(deductions.length)result.notes=unique([result.notes,...deductions]).join('；');
-  for(const key of ['title','employer','gender','age','language','hours','shift','rest','workContent','requirements','interview'])if(typeof result[key]==='string')result[key]=cleanBrackets(cleanCompanyText(result[key],!['age','hours','rest'].includes(key)));
+  for(const key of ['title','employer','gender','age','language','hours','rest','workContent','requirements','interview'])if(typeof result[key]==='string')result[key]=cleanBrackets(cleanCompanyText(result[key],!['age','hours','rest'].includes(key)));
   const pay=extractPay(result.salary);
   const notes=clauses(cleanCompanyText(result.notes,true,true));
   for(let i=1;i<notes.length;i++)if(compensationPattern.test(notes[i])&&/(?:满|滿).*(?:月|年)|(?:入职|入職).*(?:后|後)|达到|達到/.test(notes[i-1])&&!costPattern.test(notes[i-1])){notes.splice(i-1,2,notes[i-1]+'，'+notes[i]);i--;}
@@ -396,7 +400,7 @@
   if(!order.title||generic.test(order.title)||/^[（(]?批文/.test(order.title))errors.push('未可靠识别职位，请人工核对');
   if(!['男','女','男女不限'].includes(order.gender))errors.push('请选择招聘性别：男、女或男女不限');
   if(!validCode(order.code))errors.push('公司单号格式应为 ZY-年份-月日-流水，可附上家字母');
-  for(const key of ['title','employer','salary','gender','age','language','hours','shift','rest','workContent','requirements','notes','interview']){
+  for(const key of ['title','employer','salary','gender','age','language','hours','rest','workContent','requirements','notes','interview']){
    const value=String(order[key]||'');if(/[【】\[\]［］〔〕「」『』]/.test(value))errors.push('公司单不能含原单字段括号');
    if(sourceIdentifiers(value).length)errors.push('公司单不能含完整上家编号，只保留单号后的上家字母');
    if(hasQuote(value)||clauses(value).some(part=>hasUpstreamCharge(part)||(deductionPattern.test(part)&&key!=='notes')))errors.push('公司单仍有原单报价或费用信息，请核对');

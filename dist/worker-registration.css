@@ -1,0 +1,36 @@
+/* Original A4 coordinates and typography; application controls remain responsive. */
+#modal.worker-modal{width:min(960px,98vw);max-width:98vw;padding:18px;background:#f3f5f5}
+.worker-preview-sheet{width:100%;container-type:inline-size}
+.worker-template-page{position:relative;width:100%;aspect-ratio:210/297;overflow:hidden;background:#fff;break-after:page}
+.worker-template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.worker-template-field{position:absolute;display:block;transform:translateY(-50%);min-height:1em;overflow:hidden;white-space:pre;color:#111;font-family:"SimSun","PMingLiU","Songti TC",serif;font-size:1.85cqw;line-height:1.12;font-weight:400}
+.worker-template-field.worker-template-wrap{white-space:pre-wrap;line-height:1.08;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;max-height:2.16em}
+.worker-template-fit{font-size:calc(1.85cqw * var(--fit-scale,1))}
+.worker-template-check{font-family:"Arial","SimSun",serif;font-size:2.05cqw;font-weight:700;text-align:center;line-height:1}
+.worker-template-photo{position:absolute;left:80.1%;top:11.83%;width:15.43%;height:15.71%;object-fit:cover}
+.worker-template-appendix{aspect-ratio:auto;min-height:100%;padding:7%;overflow:visible;font-family:"SimSun","PMingLiU","Songti TC",serif;font-size:1.85cqw;line-height:1.45}
+.worker-template-appendix h3{margin:4% 0 1.5%;font:700 1.85cqw "SimSun","PMingLiU",serif}
+.worker-template-appendix .appendix-box{border:1px solid #111;padding:2.2%;white-space:pre-wrap;overflow-wrap:anywhere;min-height:2.8em}
+.worker-template-appendix .appendix-row{break-inside:avoid}
+.worker-form-section{margin-top:26px;padding-top:14px;border-top:1px solid #e4e9e6}.worker-form-section h2{margin-top:0}
+.worker-source-pdf-frame{width:100%;height:76vh;border:0}.worker-pdf-status{font-size:12px;margin:8px 0}.worker-form-section textarea{min-height:75px}
+@media print{
+ @page{size:A4 portrait;margin:0}
+ body>dialog.worker-modal[open]{width:210mm!important;max-width:none!important;max-height:none!important;padding:0!important;margin:0!important;overflow:visible!important;border:0!important;background:white!important}
+ .worker-preview-sheet{width:210mm!important}
+ .worker-template-page{width:210mm;height:297mm;aspect-ratio:auto;break-after:page;page-break-after:always}
+ .worker-template-page:last-child{break-after:auto;page-break-after:auto}
+ .worker-template-background{width:210mm;height:297mm}
+ .worker-template-field{font-size:3.88mm;line-height:1.12}
+ .worker-template-field.worker-template-wrap{font-size:3.65mm;line-height:1.08}
+ .worker-template-fit{font-size:calc(3.88mm * var(--fit-scale,1))}
+ .worker-template-check{font-size:4.3mm}
+ .worker-template-appendix{width:210mm;min-height:297mm;height:auto;padding:18mm;overflow:visible;font-size:3.88mm;break-before:page}
+ .worker-template-appendix h3{font-size:3.88mm}
+ .worker-template-appendix .appendix-box{padding:4mm;border:.25mm solid #111}
+}
+.worker-form-section .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.worker-form-section label{min-width:0}
+.worker-form-section input,.worker-form-section select,.worker-form-section textarea{width:100%;min-width:0}
+.worker-heading{flex-wrap:wrap}.worker-heading .actions{max-width:100%}
+@media(max-width:640px){.worker-form-section .fields{grid-template-columns:minmax(0,1fr)}.worker-form-section .wide{grid-column:1/-1}#worker-registration-form .upload input{max-width:100%}}

@@ -157,7 +157,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('X-Frame-Options', 'DENY')
         self.send_header('Referrer-Policy', 'same-origin')
-        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
         if cookie:
             self.send_header('Set-Cookie', cookie)
         self.end_headers()
@@ -229,11 +229,11 @@ class Handler(BaseHTTPRequestHandler):
             elif method == 'GET':
                 if path=='/config.js':
                     return self.reply(200,b"window.ZY_CONFIG={provider:'sqlite'};",content_type='text/javascript; charset=utf-8')
-                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
+                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/worker-registration.js':'worker-registration.js', '/order-audit.js':'order-audit.js', '/worker-registration.css':'worker-registration.css', '/worker-registration-template.png':'worker-registration-template.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
                 if path not in files:
                     raise APIError(404, '找不到页面')
                 target = ROOT / 'dist' / files[path]
-                mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png'}
+                mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.css':'text/css; charset=utf-8'}
                 self.reply(200, target.read_bytes(), content_type=mime[target.suffix])
             else:
                 raise APIError(405, '方法不被允许')

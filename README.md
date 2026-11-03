@@ -24,6 +24,7 @@ npm run check
 npm test
 npm run test:parser
 python3 scripts/smoke.py
+python3 scripts/worker_smoke.py
 npm ci --ignore-scripts
 npm run test:postgres
 npm run test:transport
@@ -51,7 +52,7 @@ Features include today's statistics, date-grouped order lists, a monthly entry-d
 
 A new shared database starts empty. It does not create demo records or automatically upload legacy browser data. Existing localStorage/IndexedDB data remains untouched. Administrators can explicitly import legacy data from the same browser origin; duplicate IDs/codes are skipped. A new domain cannot access another origin's browser storage. Full SQLite backups use `python3 server/app.py backup --output /private/new-backup.sqlite3`; worker JSON export is not a full service backup.
 
-The original registration background template, field coordinates, and OCR source were not supplied. PDF recognition, original-PDF import, and original-PDF preview remain unimplemented in this rebuild; printing uses a reconstructed table. Legacy offline caches are disabled to avoid false save confirmations. Offline business operations are unsupported.
+The supplied legacy worker export now provides the original registration background, coordinates, and PDF helpers. Worker preview/printing uses that original A4 template, with long-text appendices and an adapted PDF text/OCR import flow. See the [worker registration guide](docs/worker-registration.md) for compatibility, limits, and testing boundaries. Legacy offline caches are disabled to avoid false save confirmations. Offline business operations are unsupported.
 
 ## Recognition rules and error memory
 
@@ -77,6 +78,10 @@ Single and batch entry share a span-based ledger with classified, excluded, revi
 
 The English/Chinese button beside the date changes the interface, including login and dialogs. The preference is stored in the current browser. Text updates in place, preserving unsaved fields, passwords, source text, gender selections, and batch edits. Business records, publication text, names, salaries, and stored gender values are not translated.
 
-Batch and single entry share the same two-column workspace: source review on the left, the complete `orderFields` form on the right. Each item exposes code, position, employer, salary, gender, age, language, hours, shift, interview, rest, duties, requirements, notes, and ZY package price. Item switching preserves edits; salary edits do not overwrite manually entered prices. Save validates required fields and unique codes, determines each item's `draft`/`ready` status from its price, and submits the batch once. Narrow screens use one column.
+Batch and single entry share the same two-column workspace: source review on the left, the complete `orderFields` form on the right. Each item exposes code, position, employer, salary, gender, age, language, hours (including shift descriptions), interview, rest, duties, requirements, notes, and ZY package price. Item switching preserves edits; salary edits do not overwrite manually entered prices. Save validates required fields and unique codes, determines each item's `draft`/`ready` status from its price, and submits the batch once. Narrow screens use one column.
 
 See the [update log](docs/update-log.md) for recent changes. The migration specification describes the historical source application; this README describes the rebuilt shared system. Automated local tests do not substitute for verifying production HTTPS, hosted Auth/Edge Functions, remote persistence, or provider recovery.
+
+## Authenticated order self-audit
+
+After login, the browser performs a read-only audit of loaded shared orders. The Source Recognition Audit button refreshes the current list and compares seven required fields with source-derived proposals and their provenance. It highlights missing/uncertain facts instead of inventing them, retains manual company values until explicit review/save, and can download a private report containing original orders. The report can be supplied for manual review; the assistant has not independently accessed the live authenticated dataset.

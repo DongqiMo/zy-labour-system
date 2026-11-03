@@ -91,7 +91,7 @@ with tempfile.TemporaryDirectory() as tmp:
             staff.evaluate('accountDialog()');assert staff.locator('#userForm').count()==0
             staff.evaluate("document.querySelector('#modal').close()")
             admin.set_viewport_size({'width':390,'height':844})
-            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth'),admin.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.tagName,e.className,e.id,Math.round(e.getBoundingClientRect().width)]).slice(0,15)")
             admin.set_viewport_size({'width':1440,'height':1000})
             admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
             admin.locator('#raw').fill('【更新】XR80080香港某公司招聘：\n招聘岗位：铲车/叉车起重车驾驶员（货仓）：8名\n薪金待遇：HKD17118（底15500+1618津贴）\n工作时间：每天9小时\n基本要求：男女不限，30~48岁\n备注：铲车津贴（HKD500）需考证；雇主提供宿舍扣租金2500/月\n费用：23800全包\nDJ: 90000\n80000')
@@ -165,7 +165,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.reload();admin.wait_for_selector('#syncStatus')
             assert admin.evaluate('ZYI18n.language')=='en'
             admin.set_viewport_size({'width':390,'height':844})
-            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth'),admin.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.tagName,e.className,e.id,Math.round(e.getBoundingClientRect().width)]).slice(0,15)")
             admin.locator('header [data-language-toggle]').click()
             fixed=admin.evaluate("orders.find(o=>o.id==='legacy-kitchen')")
             assert fixed['code'].startswith('ZY-26-1103-')
@@ -234,7 +234,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.review-confirm input').check()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='8'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='10'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation']
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',reviewed)==[]
             # Batch uses the same classifier, and raw changes invalidate a prior confirmation.
@@ -260,8 +260,23 @@ with tempfile.TemporaryDirectory() as tmp:
               return {groups,first,count,codeMatch,mismatch,cleared,noFold};}""")
             assert checks==dict(groups=2,first=1,count='1',codeMatch=1,mismatch=0,cleared=1,noFold=True),checks
             admin.set_viewport_size({'width':390,'height':844});admin.evaluate("go('orders')")
-            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth'),admin.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.tagName,e.className,e.id,Math.round(e.getBoundingClientRect().width)]).slice(0,15)")
             admin.set_viewport_size({'width':1440,'height':1000})
+            # Audit all shared orders without changing revisions, raw sources or manual values.
+            original=admin.evaluate("api('/api/orders')")
+            admin.evaluate('openOrderAudit()')
+            assert '原单识别自查' in admin.locator('#modal').inner_text()
+            assert admin.locator('#modal .recognition-review').count()==len(original['orders'])
+            assert admin.evaluate("api('/api/orders')")==original
+            with admin.expect_download() as download:
+                admin.evaluate('downloadOrderAudit()')
+            audit=json.loads(Path(download.value.path()).read_text())
+            assert audit['total']==len(original['orders']) and all('sources' in record for record in audit['records'])
+            assert all('shift' not in (record['candidate'] or {}) for record in audit['records'])
+            admin.evaluate('openAuditedOrder(0)')
+            assert admin.locator('#o-shift').count()==0
+            assert admin.evaluate("api('/api/orders')")==original,'Audit preview must not write changes'
+            admin.evaluate("editing=null;go('orders')")
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
