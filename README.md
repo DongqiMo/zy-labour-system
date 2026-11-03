@@ -1,1 +1,56 @@
-# zy-labour-system
+# 卓亚港澳劳务系统 / ZY Labour System
+
+按 `docs/migration-spec.md` 重建的劳务单和劳工管理系统，现已加入**账号登录、团队共享资料、Supabase免费云端适配、SQLite自托管后备和编辑冲突检查**。白色页面背景；不再以浏览器本地数据作为业务资料源。
+
+## 本地开发
+
+Python 3.12+、Node.js（仅运行语法检查）。运行服务不需要第三方Python依赖。
+
+```sh
+python3 server/app.py create-admin --username owner
+npm start
+```
+
+第一条通过私密交互提示建立管理员（至少12字符密码，无默认密码）。`npm start` 在本机端口8080启动开发HTTP服务；本地 `--dev` 只允许回环监听，生产必须用HTTPS和Secure Cookie。默认库为被Git忽略的 `var/zy.sqlite3`。不要把数据库或真实资料提交到GitHub。
+
+管理账号登录后从「账号设置」开通员工。双方共享订单和劳工资料；员工可以增删改共享业务资料，只有管理员能管理账号。列表每5秒轮询，正在填写的表单不会被轮询替换；版本冲突拒绝保存并保留当前输入。本地会话存于HttpOnly Cookie；原单不能随公司单编辑而变化。
+
+## 验证
+
+```sh
+npm run check
+npm test
+python3 scripts/smoke.py
+```
+
+API测试使用标准库临时服务器/数据库。浏览器测试需要已有的Playwright Python包及 `/usr/bin/chromium`，自动启动临时服务，验证两个独立账号共享订单/劳工、重新载入、编辑冲突、角色权限、退出与白色手机布局；不生成截图或正式账号。
+
+## 免费网页式系统部署
+
+默认 **免费静态托管（GitHub Pages或Cloudflare Pages）+ Supabase Free**。见 [免费部署说明](docs/deployment.md)。不再使用付费Render方案；未建立付费资源或公开站点。开通仍需用户拥有并配置自己的Supabase及网页托管账号；免费服务有容量/休眠限制，不保证永久无限使用。
+
+网页填公开项目网址和publishable/anon key，绝不能放service_role、sb_secret或数据库密码。生产使用Supabase邮箱密码登录；账号管理用受限Edge Function，业务RPC检查实时团队身份。静态云端会话保存在当前标签页sessionStorage并定时刷新；SQLite后备模式使用HttpOnly Cookie。关闭标签页后需要重新登录；这两种认证模式不是同一套账号。
+
+```sh
+npm ci --ignore-scripts
+npm run test:postgres
+npm run test:transport
+```
+
+固定版本PGlite仅作为开发测试依赖，运行网页不需要。PostgreSQL测试包含真实权限、原子恢复、暂停写入和 **PostgreSQL → SQLite → PostgreSQL** 往返；transport/Edge测试使用模拟HTTP，不代表真实Supabase托管服务已验证。Node24用于Edge TypeScript测试。原有Python/SQLite后备测试仍保留。
+
+## 随时迁移业务数据库
+
+管理员「账号设置」可暂停写入、导出完整业务资料、恢复到空数据库。统一JSON包括订单、劳工、照片、附件和原有业务字段；不包含账号密码或会话。写入暂停在数据库层执行，恢复在事务中验证并提交。32MB以上不支持浏览器直接导入。
+
+详见 [迁移与回退步骤](docs/database-migration.md)。`scripts/portable.py`提供校验/哈希、SQLite导出与空库恢复。已验证跨库业务资料完整往返；更换供应商的账号需重新开通，真实云端及大数据量仍需上线验收。
+
+## 业务与迁移边界
+
+已包含今日统计、全量订单日期分组、职位搜索/状态筛选、单条/批量启发式整理、公司单号及全包价建议、公司单编辑/复制/删除、劳工登记/照片压缩/经历列表、登记表预览/浏览器打印、劳工JSON备份。繁简转换按需加载CDN OpenCC，失败明确提示保留原文，识别需人工核对。
+
+共享库首次启动为空，不写入演示资料，不自动上传旧浏览器资料。旧 localStorage/IndexedDB 保持原样。管理员可明确确认后导入**同一浏览器来源**的旧资料，重复ID/单号跳过。新域名不能访问旧域名资料；跨来源迁移需另行处理。完整服务备份使用 `python3 server/app.py backup --output 私密新路径.sqlite3`，不是劳工JSON导出。
+
+迁移文档没有附原版背景模板、固定坐标或OCR源码；PDF识别/原始PDF导入/原文预览仍未实现，当前列印使用重建表格。共享版停用旧离线应用缓存，以免过期本机版误报保存成功；暂不支持离线操作。
+
+当前测试验证的是此环境的临时服务，不代表公开部署、真实HTTPS服务、远程磁盘持久化或平台恢复已验证。

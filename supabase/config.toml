@@ -1,0 +1,4 @@
+[functions.team-admin]
+# JWT is validated by the project RPC using the caller's bearer token.
+# Supports both publishable keys and newer Auth signing keys.
+verify_jwt = false

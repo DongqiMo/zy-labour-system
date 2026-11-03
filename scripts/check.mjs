@@ -1,0 +1,1 @@
+import {readFileSync} from 'node:fs';import vm from 'node:vm';const html=readFileSync('dist/index.html','utf8');const js=html.match(/<script>([\s\S]*?)<\/script>/)[1];new vm.Script(js);JSON.parse(readFileSync('dist/app.webmanifest','utf8'));console.log('JavaScript syntax and manifest valid');

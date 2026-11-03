@@ -1,0 +1,3 @@
+// Shared business data must never be served from a previous local-only cache.
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('zy-order-desk')).map(k=>caches.delete(k)));await self.registration.unregister();await self.clients.claim()})()));
