@@ -1,11 +1,11 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='3';
+ const VERSION='4';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
- const stripOrdinal=s=>String(s).replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
- const ignoredPrefixes=new Set(['HKD','USD','RMB','CNY','MOP','CAD','EUR','GBP','AUD','ISO','CET','HACCP']);
- const idPattern=/(^|[^A-Za-z0-9])((?:ZY-\d{2}-\d{4}-\d{2,})|(?:[A-Za-z]+[-_]\d{4,}(?:[-_.]\d+)*)|(?:(?:XR|AT|QY)[-_]?\d{3,}(?:[-_]\d+)*)|(?:[A-Za-z]+\d{6,}))(?![A-Za-z0-9])/g;
+ const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?=\D)/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
+ const ignoredPrefixes=new Set(['HK','HKD','USD','RMB','CNY','MOP','CAD','EUR','GBP','AUD','ISO','CET','HACCP']);
+ const idPattern=/(^|[^A-Za-z0-9])((?:ZY-\d{2}-\d{4}-\d{2,})|(?:[A-Za-z]+[-_]\d{4,}(?:[-_.]\d+)*)|(?:(?:XR|AT|QY)[-_]?\d{3,}(?:[-_]\d+)*)|(?:[A-Za-z]+\d{6,}))(?=HK(?=[\u3400-\u9fff])|[^A-Za-z0-9]|$)/g;
  function sourceIdentifiers(input){
   const found=[];for(const match of String(input??'').matchAll(idPattern)){
    const prefix=match[2].match(/^[A-Za-z]+/)[0].toUpperCase();if(ignoredPrefixes.has(prefix))continue;
@@ -46,9 +46,29 @@
    if(text===label)return {key,value:''};
   }return null;
  }
+ function recognitionText(input){
+  let text=String(input??'').replace(/\r\n?/g,'\n');
+  text=text.replace(/[【\[［「『〔]([^】\]］」』〕]{1,25})[】\]］」』〕]/g,(whole,label)=>{
+   const compact=label.replace(/\s/g,'');return allLabels.some(item=>item.label===compact)?'\n【'+compact+'】':whole;
+  });
+  let pendingValue=false;
+  return text.split('\n').map(stripOrdinal).filter(line=>{
+   if(!line)return true;const tagged=matchLabel(line);
+   const keep=pendingValue&&!/[+＋]/.test(line)&&/^\d[\d,.]*$/.test(line);
+   pendingValue=!!tagged&&!tagged.value&&['salary','compensation','age','rest','hours'].includes(tagged.key);
+   return keep||!sourceQuoteLine(line);
+  }).join('\n');
+ }
+ function sourceQuoteLine(value){
+  const text=stripOrdinal(value).trim();
+  // Unlabelled monetary expressions are never salary. Units for age, hours,
+  // temperature, headcount and weight are deliberately excluded.
+  const expression=/^(?:[$￥¥]|HKD?|RMB|CNY)?\s*\d[\d,.]*(?:\s*[kKwW万萬元])?(?:\s*[+＋/／×*]\s*\d[\d,.]*(?:\s*[kKwW万萬元])?)*\s*(?:起|左右|上下)?$/i;
+  return expression.test(text)||(!matchLabel(text)&&/\d/.test(text)&&costPattern.test(text)&&!compensationPattern.test(text)&&!/住宿|宿舍|住扣/.test(text));
+ }
  const generic=/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位(?:名称)?|職位(?:名稱)?|岗位|崗位|工种|工種)$/;
  const editorial=s=>cleanBrackets(sanitizeRaw(s)).replace(/^(?:更新|急单|急單|新增)\s*/,'').trim();
- const jobWords=/(?:师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問)/;
+ const jobWords=/(?:师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工)/;
  function titleValue(value,explicit=false){
   let text=editorial(value).replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
   if(/^[（(]?\s*批文/.test(text))return '';
@@ -84,7 +104,7 @@
    const part=lines.slice(start).join('\n').trim();if(part)output.push(part);
   }return output;
  }
- const moneyToken='(?:HKD|USD|RMB|CNY|MOP|CAD|EUR|GBP|港币|港幣|港元|人民币|人民幣|澳门币|澳門幣|[$￥¥])?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-~～至]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*(?:HKD|USD|RMB|CNY|MOP|港币|港幣|港元|元|[wW万萬])?(?:\\s*[/／](?:月|年|日|天|小时|小時|时|時))?';
+ const moneyToken='(?:HKD|HK|USD|RMB|CNY|MOP|CAD|EUR|GBP|港币|港幣|港元|人民币|人民幣|澳门币|澳門幣|[$￥¥])?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-~～至]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*(?:HKD|USD|RMB|CNY|MOP|港币|港幣|港元|元|[wW万萬])?(?:\\s*[/／](?:月|年|日|天|小时|小時|时|時))?';
  const quotePattern=/全包|包价|包價|打包价|打包價|总价|總價|總費|总费|底价|底價|上家价|上家價|上游价|上游價|成本价|成本價/;
  const costPattern=/租金|住宿(?:扣|费|費)|住(?:宿)?扣|宿舍(?:扣|费|費)|劳务|勞務|办证|辦證|保险|保險|中介|佣介|管理费|管理費|服务费|服務費|报名费|報名費|收费|收費|费用|費用|报价|報價/;
  const compensationPattern=/津贴|津貼|补贴|補貼|补助|補助|奖金|獎金|佣金|提成|加班费|加班費|底薪|基本工资|基本工資|底\d/;
@@ -101,6 +121,7 @@
  }
  function cleanCompanyText(value,removeBarePrice=true,allowCompensation=false){
   return unique(clauses(stripSourcePackage(value,false)).map(part=>{
+   if(removeBarePrice&&sourceQuoteLine(part))return '';
    part=cleanBrackets(part);if(quotePattern.test(part))return '';
    if(costPattern.test(part)){
     const marker=part.match(costPattern);const hasHousing=/住宿|宿舍|住扣/.test(marker[0]);let preceding=part.slice(0,marker.index);preceding=preceding.replace(new RegExp(moneyToken+'\\s*$','i'),'').replace(/(?:扣|需付|另收|另加|收取|支付|含|加|实际|實際|大约|大約|约|約)\s*$/,'').trim();const housing=hasHousing&&!/住宿|宿舍/.test(preceding)?(/宿舍/.test(marker[0])?'宿舍':'住宿'):'';part=(preceding+housing).replace(/(?:扣|需付|另收|收取|支付|实际|實際|大约|大約|约|約)\s*$/,'').trim();
@@ -126,7 +147,7 @@
    for(const part of clauses(text)){if(costPattern.test(part)||quotePattern.test(part))continue;const found=part.match(strict);if(found){offset=text.indexOf(part)+found.index;lead=found;break;}}
   }
   if(!lead||!lead[0].match(/\d/))return {salary:'',notes:[]};
-  const salary=lead[0].trim(),before=text.slice(0,offset).replace(/(?:工资|工資|月薪|薪金|薪酬|薪资|薪資)\s*[:：]?\s*$/,'');
+  const salary=lead[0].trim()+(text.slice(offset+lead[0].length).startsWith('+')&&!/^\+\d/.test(text.slice(offset+lead[0].length))?'+':''),before=text.slice(0,offset).replace(/(?:工资|工資|月薪|薪金|薪酬|薪资|薪資)\s*[:：]?\s*$/,'');
   let rest=text.slice(offset+lead[0].length).replace(/^[\s+，,；;]+/,'').replace(/^[（(]([\s\S]*)[）)]$/,'$1');
   const notes=clauses([before,rest].filter(Boolean).join('；')).map(part=>cleanCompanyText(part,true,true)).filter(Boolean);
   return {salary,notes};
@@ -160,7 +181,7 @@
    if(label){requirement=label.key==='requirements';if(requirement&&label.value)candidates.push(label.value);else if(label.key==='title'){
     const hint=cleanBrackets(label.value).match(/(?:男女不限|(?:男性|女性|男士|女士)(?=[\s，,；;（(\d]|$)|\s[男女](?=\s|\d)|[男女](?=\d{2}岁))/);if(hint)candidates.push(hint[0]);
    }continue;}
-   if(requirement&&/^(?:(?:男性|女性|男士|女士|男工|女工|男|女)(?=[\s，,；;（(\d]|$)|性别|性別|只招|限招|男女不限|不限性别|不招)/.test(lines[i]))candidates.push(lines[i]);
+   if(/^(?:(?:男性|女性|男士|女士|男工|女工|男|女)(?=[\s，,；;（(\d]|$)|性别|性別|只招|限招|男女不限|不限性别|不招)/.test(lines[i]))candidates.push(lines[i]);
    else if(roleHeader(lines[i])||/男女(?:不限|均可|皆可)|只招|仅限|僅限|不限性别|性别不限/.test(lines[i])){
     const hint=lines[i].match(/男女不限|男[\/／、]女均可|(?:男性|女性)(?=[\s，,；;（(\d]|$)|男(?=\s|\d|[，,]|$)|女(?=\s|\d|[，,]|$)|性别不限|不限性别/);if(hint)candidates.push(hint[0]);
    }
@@ -169,10 +190,15 @@
  }
  function parseOne(input,code=''){
   const o={raw:sanitizeRaw(input),code:companyCode(code,sourcePrefix(input)),sourcePrefix:sourcePrefix(input),parserVersion:VERSION};
-  const lines=o.raw.split('\n').map(s=>s.trim()).filter(Boolean),buckets={},titles=[],genderContext=[];
+  const lines=recognitionText(o.raw).split('\n').map(s=>s.trim()).filter(Boolean),buckets={},titles=[],genderContext=[];
   const push=(key,value)=>{if(value)(buckets[key]??=[]).push(value)};let section='',componentLabel='';
   for(let i=0;i<lines.length;i++){
-   const original=lines[i],line=stripOrdinal(original);if(/^#|^DJ\s*[:：]\s*\d/i.test(line)||/^\d[\d,.\s]*$/.test(line))continue;
+   const original=lines[i],line=stripOrdinal(original);if(/^#|^DJ\s*[:：]\s*\d/i.test(line)||(/^\d[\d,.\s]*$/.test(line)&&!['salary','compensation','age','rest','hours'].includes(section)))continue;
+   const compact=line.match(/^(?:HK)?(?:工厂|工廠)?(食品加工)(HK(?:D)?\s*\d[\d,.]*\+?)$/i);
+   if(compact){titles.push({value:compact[1],rank:0});push('salary',compact[2]);section='';continue;}
+   if(/^(?:男性|女性|男|女)(?=[，,\s])/.test(line)){push('requirements',line);continue;}
+   if(/^(?:主要做|能接受)/.test(line)){push('workContent',line);continue;}
+   if(/^(?:住扣|住宿扣|宿舍扣)/.test(line)){push('notes',line.replace(/.*?(?:必须住|必須住).*/, '必须住宿'));continue;}
    const tagged=matchLabel(line);
    if(tagged){
     section=tagged.key;
@@ -201,14 +227,14 @@
   const joined=key=>unique(buckets[key]||[]).join('\n');
   o.title=titles.sort((a,b)=>a.rank-b.rank)[0]?.value||'';o.employer=joined('employer');if(!o.employer){const candidate=lines.map(editorial).find(line=>line.length<50&&!matchLabel(line)&&!roleHeader(line)&&!/[：:]|经验|經驗|要求|工作|薪|住宿|食宿/.test(line)&&/公司|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口/.test(line));if(candidate)o.employer=candidate.replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?$/,'').trim();}
   const pay=extractPay((buckets.salary||[])[0]||'');o.salary=pay.salary;
-  o.gender=normalizeGender(joined('gender'),input);
+  o.gender=normalizeGender(joined('gender'),recognitionText(input));
   const context=[joined('age'),joined('requirements'),...genderContext].filter(Boolean).join('\n');
-  o.age=joined('age')||context.match(/(?:\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]?(?:左右)?|\d{2}\s*[岁歲](?:以下|以内|以內|以上)?)/)?.[0]||'';
-  o.language=joined('language')||unique(input.match(/粤语|粵語|普通话|普通話|英语|英語|日语|日語|韩语|韓語|客家话|客家話|潮汕话|潮汕話/g)||[]).join('、');
+  o.age=joined('age')||context.match(/(?:\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]?(?:左右)?|\d{2}\s*[岁歲](?:以下|以内|以內|以上|内|內)?)/)?.[0]||'';
+  o.language=joined('language')||unique(input.match(/粤语|粵語|普通话|普通話|英语|英語|英文|日语|日語|韩语|韓語|客家话|客家話|潮汕话|潮汕話/g)||[]).join('、');
   const scheduling=joined('hours');
-  const hours=scheduling||input.match(/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時)/)?.[0]||'';
+  const hours=scheduling||input.match(/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|[hH](?![A-Za-z]))/)?.[0]||'';
   const noteParts=[...pay.notes,...(buckets.notes||[])];
-  const restMatch=input.match(/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天/)?.[0]||'';
+  const restMatch=input.match(/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m)?.[0]||'';
   o.hours=clauses(hours).map(part=>{
    if(restMatch)part=part.replace(restMatch,'');
    const benefits=part.search(/(?:满|滿).*(?:月|年)|有(?:奖金|獎金)|劳工假|勞工假/);

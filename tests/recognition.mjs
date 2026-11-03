@@ -75,3 +75,16 @@ assert(!benefitInRequirements.requirements.includes('2000'));assert(benefitInReq
 const distantSalary='岗位：厨师\n工资：HKD18000\n\n司机 男 40岁以下\n工作要求：\n'+Array.from({length:25},(_,i)=>`${i+1}.相关工作经验`).join('\n')+'\n工资：HKD19000';
 assert.equal(P.splitOrders(distantSalary).length,2);
 assert.equal(P.splitOrders('岗位：厨师\n工资：HKD18000\n岗位：电工\n工作要求：有经验').length,2);
+
+// Decorative prefixes must not obstruct classification or disclose supplier costs.
+for(const bullet of ['·','•','●','✅','👉','- ']){
+ const raw=`新单\n视频面试\nCV998877HK工厂食品加工HK16888+\n${bullet}男，50岁内，粤语\n${bullet}10H，休4，轮班\n${bullet}住扣10%（必须住）\n${bullet}主要做急冻食品\n${bullet}能接受0-4度室温工作\n💰2K+2.64办证保险另计（劳务费800）`;
+ const o=P.parse(raw,'ZY-26-1103-15');
+ assert.equal(o.title,'食品加工');assert.equal(o.gender,'男');assert.equal(o.age,'50岁内');assert.equal(o.hours,'10H');assert.equal(o.salary,'HK16888+');assert.equal(o.code,'ZY-26-1103-15 CV');assert.match(o.workContent,/0-4度/);
+ assert.doesNotMatch(JSON.stringify({...o,raw:'',parsedSnapshot:''}),/2K|2\.64|800|10%/);
+}
+for(const tail of ['22000+3500+1100','3.2w','💰2K+2.64办证保险另计']){
+ const o=P.parse(`【职位】销售员\n【工资】16888\n【要求】女，18-40岁\n【工作要求】一年销售经验【工作内\n容】整理商品\n${tail}`,'ZY-26-1103-16');
+ assert.equal(o.salary,'16888');assert.equal(o.workContent,'整理商品');assert.doesNotMatch(o.requirements,/22000|3500|1100|3\.2|2K|工作内容/);
+}
+console.log('PASS: decorative bullets, compact HK headers, supplier expressions, inline/wrapped labels, legitimate temperatures and salaries');
