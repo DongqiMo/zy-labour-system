@@ -1,30 +1,33 @@
-# 网站更新日志
+# Website Update Log
 
-## 2026-11-03：薪资识别修复（解析版本 5）
+## 2026-11-03: Repository documentation in English
 
-### 问题原因
+- Converted the README, deployment guide, database migration guide, historical migration specification, and update log to English.
+- Documentation-only change: website interface languages, user-entered content, recognition rules, and business data remain unchanged.
+- Chinese source examples are retained only where necessary to document exact parser inputs or stored values.
 
-- 「职位薪酬」未被登记为薪资字段，整行被当作未知字段跳过。
-- 货币规则未完整支持 `HK$`，会把它拆成 `$` 和多余的 `HK` 备注。
+## 2026-11-03: Salary recognition fix (parser version 5)
 
-### 本次修复
+### Root causes
 
-- 支持「职位薪酬／職位薪酬」「职位薪资／職位薪資」「岗位薪酬／崗位薪酬」。
-- 完整识别 `HK$`，保留金额、千位逗号、月薪单位及末尾 `+`。
-- 示例：`[职位薪酬]HK$26000+` 自动填入薪资 `HK$26000+`。
-- 工资前有食宿说明时，仍可识别后面的 `HK$` 薪资。
-- 非薪资字段中的港币金额清理规则同步支持 `HK$`，继续排除原单劳务费、办证费、保险费及上家报价。
-- 更新解析脚本版本，便于浏览器载入新规则。
+- The position-pay label was not registered as a salary field, causing the entire line to be skipped.
+- Currency matching did not support the complete `HK$` prefix: it could split it into `$` salary and an unwanted `HK` note.
 
-### 验证
+### Changes
 
-- JavaScript 语法检查通过。
-- 原有解析回归测试通过。
-- 新增六类简繁体薪资标签、四类金额格式及费用排除测试通过。
-- 浏览器验收通过：单条和批量录入、共享账户、编辑冲突、原单保留、中英界面切换等流程无浏览器错误。
+- Added six simplified/traditional position-pay labels: `职位薪酬`, `職位薪酬`, `职位薪资`, `職位薪資`, `岗位薪酬`, and `崗位薪酬`.
+- Preserved complete `HK$` amounts, thousands separators, monthly units, and trailing `+`.
+- Example: `[职位薪酬]HK$26000+` fills salary with `HK$26000+`.
+- Recognized HK-dollar salaries following meal/accommodation descriptions.
+- Extended non-salary currency cleanup to `HK$`; upstream agency, permit, insurance, and package-price quotations remain excluded.
+- Updated the parser asset version so browsers request the new rules.
 
-### 使用方式
+### Verification
 
-刷新网站，在原单页点击「自动整理」，核对薪资后保存。已有单据不会被此次发布自动改写，需要重新整理并确认保存。
+JavaScript syntax checks, existing parser regressions, new label/currency/fee-exclusion cases, and browser acceptance checks passed. Browser checks cover single/batch entry, shared accounts, editing conflicts, source preservation, and interface language switching, with no browser errors.
 
-网站：https://dongqimo.github.io/zy-labour-system/
+### Applying the update
+
+Refresh the website, run Auto-organize on the source order, review the salary, and save. Existing records are not automatically rewritten; re-recognition and explicit save are required.
+
+Website: https://dongqimo.github.io/zy-labour-system/

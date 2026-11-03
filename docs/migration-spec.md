@@ -1,274 +1,259 @@
-# ZY 劳务管理系统技术迁移文档
+# ZY Labour System: Original Technical Migration Specification
 
-> 用途：供 OpenAI Codex 依据当前已完成系统重建。本文只记录已发布系统中可核实的页面、字段、规则和行为；未确认或当前未实现的内容单独标注，不作为新增需求。
+> Historical reconstruction reference supplied for OpenAI Codex. This document records verifiable pages, fields, rules, and behavior of the original application; unconfirmed or unimplemented behavior is identified separately rather than treated as a new requirement.
 >
-> 核对基准：公开站点当前版本 v74（2026-11-02）；当前公开地址：<https://zy-order-manager.modestmango18.chatgpt.site>。
+> Historical baseline: public application v74, 2026-11-02, at <https://zy-order-manager.modestmango18.chatgpt.site>.
+>
+> **Scope:** References to “current” in the original specification mean that historical application. The rebuilt repository now has shared storage, authentication, revised recognition rules, and other changes. See [README](../README.md) for the present implementation. Historical PDF/template capabilities below are not claims that those assets or features exist in this rebuild.
 
-## 1. 系统概况
+## 1. System overview
 
-- 名称：卓亚港澳劳务系统（页面品牌也使用“ZY Labour System”）。
-- 当前实现：单页静态网页。页面结构、CSS 和主要 JavaScript 都在 `dist/index.html`；附带 `app.webmanifest`、`sw.js`、`icon.svg` 和登记表背景图 `worker-registration-template.png`。
-- 当前部署：公开网站。任何人可打开网页，但劳务单和劳工资料保存在各自浏览器本地，访客之间不会共享记录。
-- 当前无可确认的服务器 API、远程数据库、登录、用户权限或跨设备同步实现。所谓“数据库”页面目前是本地劳务单列表；劳工资料使用浏览器 IndexedDB。
-- PWA：manifest 设为 standalone；Service Worker 缓存应用入口、HTML、manifest、图标和登记表模板，离线缓存的是应用外壳，不是跨用户的数据服务。PDF/OCR 识别依赖首次联网加载第三方库。
+- Brand: ZY Labour System, a Hong Kong/Macao labour management application.
+- Original implementation: a static single-page application. HTML, CSS, and most JavaScript were in `dist/index.html`, accompanied by `app.webmanifest`, `sw.js`, `icon.svg`, and `worker-registration-template.png`.
+- Original deployment: publicly accessible frontend, with orders and workers stored separately in each visitor's browser. Visitors did not share records.
+- No confirmed server API, remote database, login, permissions, or cross-device synchronization. The database page was a local order list; worker records used IndexedDB.
+- The PWA manifest used standalone display. A Service Worker cached the shell, HTML, manifest, icon, and registration template. Offline shell caching was not a shared data service. PDF/OCR required third-party libraries to be loaded online initially.
 
-## 2. 页面和功能
+## 2. Pages and features
 
-### 2.1 今日劳务单总览（`view-dashboard`）
+### 2.1 Today's order overview (`view-dashboard`)
 
-- 顶部固定信息栏：面包屑、当前日期、圆形 Z 标记。
-- 左侧导航桌面端为深蓝侧栏；包含“今日劳务单总览”“劳务单数据库”“劳工登记表”“已登记劳工”。
-- 顶部悬浮信息区包含标题、说明、“整理新劳务单”按钮、三张统计卡、岗位搜索和状态筛选。
-- 统计卡：今日劳务单总数、今日待确认卓亚全包价、今日已完成劳务单。点击统计卡会跳到列表并设置对应状态筛选。
-- 列表只显示本地日期为今天的单子，卡片按当前记录顺序呈现。
-- 搜索框文案为“搜索岗位”，实际只匹配职位名称；状态筛选为全部、待确认卓亚全包价、已生成发布稿。
-- 每张单显示公司单号徽标（有单号时）、职位、录入日期、雇主、月薪摘要、招聘性别、年龄、全包价和状态；卡片下方有“原单”和“公司单”折叠区。
-- 卡片提供删除；待确认单提供“填卓亚全包价”；“公司单”区域可编辑；已完成单可复制公司单发布文案。
-- 删除前会二次确认，确认后不可恢复。
-- 窄屏（641–960px）CSS 会隐藏卡片全包价区域；不超过 640px 时该区域重新显示。
+- Fixed top bar: breadcrumb, current date, circular Z mark. Desktop navigation used a navy sidebar with Today's overview, Order database, Worker registration, and Registered workers.
+- Sticky heading area: title, description, New order button, three statistics cards, position search, and status filter.
+- Statistics: today's total, today's package-price confirmations pending, and today's completed orders. Selecting a card navigated to the list with the corresponding filter.
+- Only records created on the browser's local calendar date appeared, retaining record order.
+- Search matched job title only. Filters were All, Awaiting ZY package price, and Publication draft generated.
+- Cards showed company code when present, position, entry date, employer, monthly salary summary, gender, age, package price, and status. Source order and Company order were collapsible sections.
+- Cards supported deletion; draft orders offered price entry; company text was editable; completed orders could be copied for publication.
+- Deletion required confirmation and had no application-level undo.
+- Between 641 and 960 px, CSS hid the card price area; at 640 px or below it appeared again.
 
-### 2.2 整理新劳务单（`view-new`）
+### 2.2 New order workspace (`view-new`)
 
-有“单条录入”和“批量录入”两个模式。
+Both single-entry and batch-entry modes existed.
 
-**单条录入**
+**Single entry**
 
-1. 粘贴微信群原单。
-2. 点击“自动整理”，浏览器将文字转换为简体并按标签、关键词和文本位置特征识别字段。
-3. 右侧整理结果可手动改动，含公司单号、职位、雇主、薪资待遇、性别、年龄、语言、工作时间、班次、面试方式、每月休息、工作内容、工作要求、其他备注与费用、卓亚全包价。
-4. 全包价输入框会建议“月薪 + 20,000”后向下取整到 1,000 的金额，并用 w 表示；用户可改。薪资待遇字段保留原单的数字及币种写法，不转换成 w。
-5. 保存时要求有原单、职位名称和公司单号；公司单号重复时阻止保存。全包价空或 0 保存为待确认，正数保存为已完成。
+1. Paste the original recruitment message.
+2. Auto-organize converted text to simplified Chinese and extracted fields through labels, keywords, and text-position heuristics.
+3. Review/edit company code, position, employer, salary, gender, age, language, hours, shift, interview, monthly rest, duties, requirements, notes/fees, and ZY package price.
+4. Suggested package price was monthly salary + 20,000, rounded down to the nearest 1,000 and displayed in `w` units. Users could override it. Salary retained its original currency/number format.
+5. Save required source text, title, and a unique company code. An empty/zero package price meant pending; a positive price meant completed.
 
-页面保留三步指示条（录入原单、确认信息、确认全包价并生成）；当前单条表单直接有全包价框并在保存时完成状态判定，三步条不代表必须逐步进入三个独立页面。
+The three-step indicator represented Source entry → Information review → Price confirmation/publication. It did not require three separate screens: the single form already contained the price field and determined status on save.
 
-**批量录入**
+**Historical batch entry**
 
-- 一次粘贴多份原单，可用独立分隔线 `---`、连续横线/下划线/等号/星号、“下一单”“下一份”或“第 N 单/份”分隔；若未显式分隔，也会尝试按 `AT-...` 或 `ZY-YY-MMDD-NN` 行拆分。
-- 点击“识别并预览”后列出每份识别的职位、雇主、薪资、性别和年龄；可展开编辑该份原文或移除该份。
-- 至少每份要有职位名称才能批量保存；保存的批量单全包价为空、状态待确认。随后可逐单填写全包价。
+- Paste multiple sources separated by standalone `---`, repeated hyphens/underscores/equals/asterisks, next-order/next-item markers, or numbered order/item headings. Without explicit separators, the original code also attempted splits at `AT-...` or `ZY-YY-MMDD-NN` lines.
+- Recognize and preview showed title, employer, salary, gender, and age for each item. Each source could be expanded/edited or removed.
+- Each item required a title. Historical batch saves left package prices empty and statuses pending; prices could be filled afterward. The rebuilt complete batch form supersedes this historical limitation.
 
-### 2.3 劳务单数据库（`view-orders`）
+### 2.3 Order database (`view-orders`)
 
-- 展示全部本地劳务单，按录入日期分组，日期由新到旧；组内保持数据列表顺序。
-- 顶部“劳务单数据库”信息区、搜索和状态筛选采用悬浮布局；含“整理新劳务单”入口。
-- 搜索仍只查职位名称，状态筛选与总览相同。
-- 卡片操作和折叠区与总览一致：查看原单/公司单、编辑公司单、删除、为待确认单填全包价、复制已完成发布稿。
-- 公司单编辑可修改公司单字段及全包价；原单 `raw` 不随公司单编辑而改。
-- 编辑保存时，空/0 全包价设为待确认；非 0 全包价设为已生成发布稿。公司单号必填且不可与其他记录重复。
+- Listed all local orders grouped by entry date, newest dates first, preserving order within groups.
+- Sticky heading/search/filter area with a New order action. Search matched titles only; filters matched the overview.
+- Cards supported source/company viewing, company editing, deletion, pending-price entry, and copying completed publication text.
+- Company editing never changed `raw`. Empty/zero prices set pending; nonzero prices set publication-ready. Code was required and unique.
 
-### 2.4 劳工登记表（`view-workers`）
+### 2.4 Worker registration (`view-workers`)
 
-- 页面顶部悬浮标题栏，按钮为“PDF识别”“下载资料备份”“新建登记”。提示资料和照片只保存在当前浏览器，PDF 在浏览器本机处理，要求先取得本人授权。
-- 登记表含基本信息、是否曾来港从事劳务、教育及培训、工作经历、语言能力与技能、求职意向与联系方式。
-- 支持上传或拖放照片；有移除照片按钮。
-- 教育经历最多 2 条，工作经历最多 4 条；每条可移除。
-- 必填项只有姓名；点击“预览登记表”也要求姓名非空。保存后可编辑。
-- PDF识别仅接受 PDF，最大 25 MB。识别后内容填入当前表格，覆盖同名识别字段前会询问；用户仍需核对并保存。
-- 表单可预览；预览窗口提供“返回修改”和“打印 / 保存为 PDF”。“保存为 PDF”使用浏览器打印对话框，不是服务端生成 PDF 文件。
-- “下载资料备份”下载 JSON 备份；当前界面未发现相应的 JSON 导入/恢复功能。
+- Sticky header actions: PDF recognition, Download backup, and New registration. The original notice explained that records/photos were browser-local and PDF processing required the person's consent.
+- Sections: basic information, previous Hong Kong labour experience, education/training, employment history, languages/skills, job preferences, and contacts.
+- Photos supported upload, drag-and-drop, and removal. Education history allowed at most two entries; work history at most four. Entries were removable.
+- Only name was required, including before preview. Saved records could be edited.
+- Historical PDF recognition accepted PDF files up to 25 MB, filled the current form, and asked before overwriting recognized fields. Review and save remained necessary.
+- Preview offered Return to editing and Print / Save as PDF. PDF saving used the browser print dialog rather than server generation.
+- Download backup exported JSON; no corresponding restore/import UI was found in the historical application.
 
-### 2.5 已登记劳工（`view-workerRecords`）
+### 2.5 Registered workers (`view-workerRecords`)
 
-- 显示劳工照片缩略图或占位、姓名、性别、年龄、第一项求职意向和最后更新时间。
-- 每条记录可编辑、预览登记表、删除；删除需要确认且无法撤销。
-- 页面也提供“下载资料备份”和“新建登记”。记录按更新时间由新到旧排列。
+Rows showed a photo/placeholder, name, gender, age, first job preference, and last update time. Records were ordered by most recently updated and supported editing, preview, and confirmed irreversible deletion. Backup and New registration actions were also present.
 
-### 2.6 对话框及已定义但当前不可达的界面
+### 2.6 Dialogs and unreachable interfaces
 
-- 劳务单全包价对话框：HTML 和处理函数仍存在，待确认单的“填卓亚全包价”按钮会打开；正数改为完成，空/0 保持待确认。
-- 劳务单新单/原单预览对话框及复制处理函数存在，但当前卡片没有调用它的可见按钮；从页面操作无法确认该对话框的入口，迁移时应按“代码存在、UI 入口未连通”记录，不应假定用户可使用。
-- 劳工登记表预览对话框可从登记表和已登记劳工页正常进入。
+- The price dialog existed and was reachable through pending cards. A positive price completed the order; empty/zero retained pending status.
+- A source/new-order preview dialog and copy handler existed in code, but no visible card action opened it. Treat this as an unconnected UI rather than an available feature.
+- Worker preview was reachable from both registration and registered-worker pages.
 
-## 3. 原单、公司单及数据字段
+## 3. Source text, company orders, and fields
 
-### 3.1 原单
+### 3.1 Source text
 
-原单没有独立拆分字段表：原文完整文本保存在劳务单记录的 `raw` 字段，以供核对和折叠显示。粘贴文本会转为简体后再保存；因此 `raw` 是转换后的原文，不保证逐字保留繁体原貌。原单不随公司单编辑而变化。
+The complete source was stored in `raw` for review and collapsible display. Pasted text was converted to simplified Chinese, so `raw` did not guarantee preservation of original traditional characters. Company editing did not change it.
 
-识别过程中会排除：以 `#` 开头的行、形如 `DJ: 数字` 的行，以及单独只包含数字/金额的行。这些排除只用于字段识别；`raw` 仍保存整段转换后的文本。这样底部单独数字（通常为上家价格）不被作为月薪或全包价录入。
+Historical recognition ignored `#` lines, `DJ: number` lines, and standalone numeric/amount lines; these remained in archived text. Unlabelled bottom numbers, usually supplier prices, were not intended to become salary or package price.
 
-### 3.2 公司单/劳务单字段
+### 3.2 Company-order schema
 
-| 显示字段 | 存储键 | 说明 |
+| Field | Storage key | Historical meaning |
 |---|---|---|
-| 公司单号 | `code` | 生成格式 `ZY-YY-MMDD-NN`，可编辑 |
-| 职位名称 | `title` | 手动核对；不能识别时单条或批量保存会阻止 |
-| 雇主 | `employer` | 原单明确时填入 |
-| 薪资待遇（月薪） | `salary` | 保持原单币种和数字格式；公司单发布文案使用原值 |
-| 招聘性别 | `gender` | 男、女或男女不限等原单表述归一后的内容 |
-| 年龄要求 | `age` | 年龄区间/上限等文本 |
-| 语言要求 | `language` | 识别到的一种或多种语言要求 |
-| 工作时间 | `hours` | 工时/时间安排；与工作要求分开 |
-| 班次 | `shift` | 早班、通宵更等 |
-| 每月休息 | `rest` | 休息安排 |
-| 工作内容 | `workContent` | 工作职责/主要工作 |
-| 工作要求 | `requirements` | 经验、资格、性格等要求 |
-| 其他备注与费用 | `notes` | 住宿、劳务费、保险费、管理费等识别文本 |
-| 面试方式/时间 | `interview` | 面试方式、时间或地点相关文本 |
-| 卓亚全包价 | `price` | 单独的价格；空/0 为待确认，正数为完成 |
-| 原单 | `raw` | 简体转换后的原单全文 |
-| 状态 | `status` | `draft` 或 `ready` |
-| 记录 ID | `id` | 单条时间戳字符串、批量时间戳加序号，或初始样例 ID |
-| 创建时间 | `createdAt` | ISO 日期时间字符串 |
+| Company code | `code` | Editable `ZY-YY-MMDD-NN` code |
+| Position | `title` | Reviewed title; missing recognition blocked saving |
+| Employer | `employer` | Filled when explicit in the source |
+| Monthly salary | `salary` | Original number/currency format, also used in publication |
+| Recruitment gender | `gender` | Normalized source wording for male/female/unrestricted |
+| Age requirement | `age` | Range, upper limit, or other age text |
+| Language requirement | `language` | One or more recognized requirements |
+| Working hours | `hours` | Schedule, separate from job requirements |
+| Shift | `shift` | For example, morning or overnight |
+| Monthly rest | `rest` | Rest arrangement |
+| Duties | `workContent` | Responsibilities/main work |
+| Requirements | `requirements` | Experience, qualifications, personal requirements |
+| Notes and fees | `notes` | Historical accommodation/agency/insurance/management text; current privacy rules supersede this |
+| Interview method/time | `interview` | Method, timing, or location |
+| ZY package price | `price` | Separate price; empty/zero pending, positive complete |
+| Source text | `raw` | Full simplified source |
+| Status | `status` | `draft` or `ready` |
+| Record ID | `id` | Timestamp string, batch timestamp plus index, or original sample ID |
+| Created timestamp | `createdAt` | ISO datetime string |
 
-当前解析器还会生成/保留 `rawGenderAge`（原始性别年龄合并值）、`rawSchedule`（原始工作时间/班次合并值）等内部辅助字段。旧记录的其他额外键也可能随对象一起保留；保存公司单时当前代码还写入 `location: ''`。它们不是当前表单可编辑字段。
+Historical internal helpers included `rawGenderAge` and `rawSchedule`. Other legacy object keys could survive saves; company editing also wrote `location: ''`. These were not editable form fields.
 
-### 3.3 原单解析范围和优先次序
+### 3.3 Historical recognition scope and precedence
 
-- 先将繁体转换为简体；去掉前述仅用于识别的噪声行。
-- 支持 `【字段】内容`、`[字段] 内容`、`字段：内容`、带序号字段，以及不规则标题/散文格式。
-- 职位识别不是从固定行号取值。候选来源按优先级大致为：明确的职位/岗位/工种字段；岗位标题行；“招聘/急招/诚聘/招工”等短语后的职位；公司单号后附带的岗位文字；薪资前的标题文字；最后才是较短的非标签标题行。对薪资行有排除逻辑。
-- 雇主优先从雇主/公司/单位等标签取值；否则从含发廊、餐厅、工厂、公司、档口等行业词的短行判断，并剔除招聘、岗位等噪声词。
-- 性别和年龄可从标签、合并字段或正文关键词识别；男女都出现/明确不限时归一为“男女不限”。
-- 语言从语言标签或正文中的常见粤语、普通话、英语、日语、韩语、客家话、潮汕话等词识别。
-- 工作时间优先从工作/上班时间标签提取；没有标签时尝试识别小时数。班次单独识别通宵、夜班、早班、轮班等。每月休息从标签或“月休/休息 N 天”识别。
-- 工作内容和工作要求分别尝试从对应标签及后续段落提取；编号列表中的工作时间、薪资、地址、雇主、职位等非要求字段不会作为工作要求并入。
-- 其他备注尝试识别住宿、劳务费、保险费、服务费、管理费、办证费、假期等内容；面试方式从标签或视频/线上/现场/电话面试等关键词识别。
-- 解析是启发式识别，不是保证完整或准确的 OCR。原单格式多变时须由用户核对整理结果。
+- Convert traditional to simplified Chinese, then exclude recognition-only noise.
+- Recognize bracketed labels, colon labels, numbered fields, irregular headings, and prose.
+- Position extraction did not use fixed row numbers. Candidates approximately prioritized explicit position/role/trade labels, role headings, recruitment phrases, text after company codes, headings before salary, and finally short non-label headings. Salary lines had exclusion rules.
+- Employer extraction preferred employer/company/unit labels, otherwise short lines containing establishment terms such as salon, restaurant, factory, company, or stall, excluding recruitment noise.
+- Gender/age came from labels, combined fields, or text keywords. The historical heuristic normalized both genders or explicit unrestricted wording to unrestricted; the rebuilt parser adds conflict safeguards.
+- Languages included Cantonese, Mandarin, English, Japanese, Korean, Hakka, and Teochew.
+- Hours preferred working-time labels, otherwise hour quantities. Shift keywords included overnight/night/morning/rotating. Rest used labels or monthly/rest-day phrases.
+- Duties and requirements used separate headings and following paragraphs. Numbered schedule, salary, address, employer, and title fields were not intended to merge into requirements.
+- Historical notes included accommodation, agency, insurance, service, management, permit, and leave information. Interviews used labels or video/online/in-person/telephone keywords. Current supplier-price confidentiality rules supersede historical fee inclusion.
+- Extraction was heuristic, not guaranteed OCR or universally accurate recognition. Staff review was required.
 
-### 3.4 公司单发布文本
+### 3.4 Publication text
 
-复制的发布文案顺序为：
+Historical copy order:
 
-1. `公司单号｜职位名称`
-2. 雇主（有值时单独显示）
-3. 职位名称、招聘性别、年龄要求、语言要求、工作时间、班次、工资待遇、每月休息、工作内容、工作要求、其他备注、面试时间（非空才显示）
-4. 卓亚全包价（无值时显示“待确认”）
+1. Company code and position, separated by a vertical bar.
+2. Employer, if present.
+3. Nonempty position, gender, age, language, hours, shift, salary, rest, duties, requirements, notes, and interview fields.
+4. ZY package price, or pending confirmation if absent.
 
-发布文本会拆分备注中的换行、分号和句号，并丢弃包含“全包”的片段，避免把全包价以外的原文内容重复放入公司单。原单工资和费用仍不做全包价替换；薪资待遇字段保持原文字样。
+The historical publisher split notes on newlines, semicolons, and full stops, dropping clauses containing the package-price term to avoid duplication. Salary formatting remained unchanged. Current upstream-price removal is stricter than this historical behavior.
 
-## 4. 自动计算与业务规则
+## 4. Calculation and business rules
 
-### 4.1 公司单号
+### 4.1 Company codes
 
-- 格式：`ZY-{两位年份}-{两位月份}{两位日期}-{两位流水}`，如 `ZY-26-1101-07`。
-- 流水号取当前浏览器本地记录中当天同前缀的最大两位序号再加一；单条录入解析时自动填入，允许手动修改。
-- 保存时检查公司单号重复；批量保存会为每条生成公司单号。当前实现的批量单号在全包价确认之前就会生成。
+Format: `ZY-{two-digit year}-{month}{day}-{sequence}`, for example `ZY-26-1101-07`. The original application took the highest same-day sequence from local records and incremented it, allowed manual changes, and checked uniqueness on save. Batch codes were generated before price confirmation. The current system also appends supplier letters and compares base-code sequences.
 
-### 4.2 建议全包价
+### 4.2 Suggested package price
 
-- 从薪资字符串中取第一个匹配到的数字（先去千位逗号）；不含有效正数时建议值留空。
-- 公式：`floor((月薪 + 20,000) / 1,000) × 1,000`；输入/建议框用万元单位显示，保留一位小数并加 `w`。
-- 例：月薪 18,799 → 38,000 → `3.8w`。
-- 修改月薪时，若用户尚未手动编辑全包价，建议框会重新计算；用户一旦手动编辑，全包价不再跟随月薪自动更新，直到重新执行自动整理。
-- 仅全包价按 w 格式呈现。月薪字段及发布文本里的月薪沿用原单格式。
-- 已有纯数字全包价展示时，按原数值除以 10,000 并加 `w`，不将其四舍五入；已带 `w/万` 的值保持原样。例如 23,124 显示 `2.3124w`。该格式化不会更改薪资字段。
+- Take the first numeric salary value after removing thousands separators. Leave the suggestion blank without a valid positive amount.
+- Formula: `floor((monthly salary + 20,000) / 1,000) × 1,000`.
+- Display in ten-thousand units with one decimal and `w`: 18,799 salary → 38,000 → `3.8w`.
+- Salary changes recomputed the suggestion until manual price editing. After manual editing, price stayed fixed until Auto-organize was run again.
+- Only package prices used `w`; salaries retained source formatting.
+- Existing plain numeric prices were divided by 10,000 without rounding: 23,124 → `2.3124w`. Existing `w`/ten-thousand-suffix values stayed as written. Salary was unaffected.
 
-### 4.3 状态
+### 4.3 Status
 
-- `draft`：待确认卓亚全包价；新建单全包价为空或 0、批量单保存时为空、编辑公司单后全包价为空/0。
-- `ready`：已生成发布稿；新建或编辑后全包价为非零值。
-- `draft` 在卡片上使用橙色状态徽标（浅橙底 `#fff4df`、橙字 `#9b5c13`）；`ready` 使用蓝色徽标（浅蓝底 `#e4effa`、蓝字 `#2f65a0`）。公司单号徽标也使用 ready/蓝色样式。
-- 待确认卡显示“请确认卓亚全包价”或全包价格，并显示橙色“待确认卓亚全包价”及填写按钮；已完成卡显示价格并可复制公司单。
-- 空或零判定支持纯 0、小数 0、`0w`/`0万`，以及前带 HKD/港币/港元/$ 的零值。
-- 当前代码的呈现细节：字符串 `"0"` 非空，因此卡片价格区可能格式化显示 `0w`，同时状态徽标仍显示橙色待确认；状态本身在保存时正确判为 draft。重建时需区分“状态分类规则”和“当前显示细节”，不要把它误解为零价已完成。
-- 页面加载时记录状态来自已保存的 `status` 字段；新建、填价、编辑保存时才按价格重新设状态。因此旧记录若已有不一致状态，首次渲染不会自动按价格纠正。
+- `draft`: awaiting ZY package price; empty/zero price on creation/edit, including historical batch saves.
+- `ready`: publication draft generated after a nonzero price was saved.
+- Draft badge: light orange `#fff4df` background and `#9b5c13` text. Ready/code badges: light blue `#e4effa` and `#2f65a0`.
+- Draft cards offered confirmation/price entry; ready cards displayed price and supported company-text copying.
+- Zero detection included numeric/decimal zero, zero with `w` or a ten-thousand suffix, and currency-prefixed zero.
+- Historical display caveat: string `"0"` could display as `0w` while status correctly remained draft. This was not a completed zero-price order.
+- Loading used saved `status`; creation, price entry, and edits recomputed it. Inconsistent legacy statuses were not automatically repaired on first render.
 
-### 4.4 今日及日期规则
+### 4.4 Dates and age
 
-- “今日”以浏览器本地年月日和记录 `createdAt` 比较；总览统计及列表均只包含今天创建的记录。
-- 劳务单数据库不限制日期，按本地日期分组并按日期倒序；无效日期归到“日期未记录”。
-- 劳工年龄优先采用已填写的 `age`，没有时从 `birthDate` 和当前日期计算周岁。
+Today used the browser's local calendar date against `createdAt`. The full database grouped by local date, newest first; invalid dates appeared under Date not recorded. Worker age preferred entered `age`, otherwise completed years calculated from `birthDate` and the current date.
 
-## 5. 搜索、筛选、编辑、新增、删除和复制
+## 5. Search and record operations
 
-- 搜索：总览和数据库各有独立输入框；只匹配 `title`，不搜索雇主、薪资或原文。
-- 筛选：全部 / `draft` 待确认 / `ready` 已生成发布稿。
-- 新增：单条需原文、职位和公司单号；全包价可空。批量需先识别预览，且每条有职位。
-- 编辑：只提供公司单编辑表，含公司单号、职位、雇主、性别、年龄、语言、时间、班次、薪资、休息、工作内容、要求、备注、面试方式、全包价；原单不变。保存时检查职位、公司单号及重复号。
-- 填价：待确认卡可以打开全包价输入框；正数时转 ready，空/0 时仍 draft。
-- 复制：ready 单公司单折叠区可复制完整发布稿；原单/新单预览复制功能的预览对话框当前没有可见入口。
-- 删除劳务单和劳工资料均需浏览器确认；删除后无法通过应用恢复。
+Overview and database had separate title-only search inputs, with All/draft/ready filters. Single creation required source, title, and code; price could be blank. Historical batch creation required preview and titles. Editing covered company fields and price, preserving source text and enforcing title/code uniqueness. Pending-price entry changed status according to positive versus empty/zero price. Ready company text could be copied; the unconnected source-preview dialog did not provide a usable card action. Order and worker deletion required browser confirmation and had no in-app recovery.
 
-## 6. 视觉布局和交互
+## 6. Visual layout and interaction
 
-### 6.1 视觉基调
+### 6.1 Historical palette
 
-- 背景浅灰绿 `#f5f7f4`，卡片白色，正文深墨色 `#1d2927`，说明文字灰绿 `#78837f`。
-- 桌面侧栏深海军蓝 `#172b46`；品牌标记金色 `#e3bd70`；主按钮和强调蓝色 `#2f65a0`；状态橙色见上文。
-- 系统字体栈：`-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif`。
-- 内容最大宽约 1,360px；卡片圆角约 8–12px，浅色边框和轻阴影。
+- Pale gray-green background `#f5f7f4`, white cards, dark body text `#1d2927`, muted text `#78837f`. The rebuild explicitly uses a white page background.
+- Navy sidebar `#172b46`, gold branding `#e3bd70`, primary blue `#2f65a0`, and the status colors above.
+- Font stack: `-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif`.
+- Content width approximately 1,360 px; card radii approximately 8–12 px, light borders, subtle shadows.
 
-### 6.2 布局和响应式
+### 6.2 Responsive behavior
 
-- 桌面：左侧约 238px 固定视口高度导航栏；右侧主内容区。顶部信息栏高 72px。
-- 总览、数据库顶部悬浮面板和劳工登记表标题区均为 sticky；列表本身滚动。桌面端导航 sticky，手机端变为底部导航条。
-- ≤960px：侧栏收窄；新单/批量表单改为单列；订单卡重排。
-- ≤640px：主内容收紧、顶部栏高度 57px，导航固定在底部，统计卡与输入框缩小，比较区改为单列。
-- 交互包括：按钮 hover/focus、输入焦点蓝色描边、卡片/折叠区、状态徽标、toast 提示、删除确认、模态预览；劳工照片框支持点击和拖放。
+Desktop used an approximately 238 px full-height sidebar and a 72 px top bar. Overview/database heading panels and registration headers were sticky; content lists scrolled. Mobile navigation became a fixed bottom bar.
 
-## 7. 劳工登记表数据字段和 PDF
+At ≤960 px, the sidebar narrowed, new/batch forms became one column, and order cards rearranged. At ≤640 px, spacing tightened, the top bar became 57 px, navigation stayed at the bottom, controls shrank, and comparison areas became single-column.
 
-### 7.1 主字段
+Interactions included hover/focus states, blue input focus outlines, collapsible sections, badges, toasts, delete confirmations, modal previews, and clickable/draggable photo upload.
 
-| 分组 | 字段键 |
+## 7. Worker fields and historical PDF behavior
+
+### 7.1 Fields
+
+| Group | Keys |
 |---|---|
-| 基本信息 | `name`（必填）、`gender`、`birthDate`、`age`、`height`、`weight`、`marital`、`hometown`、`health`、`education`、`permit`、`idNumber`、`idValidity`、`idAddress`、`currentAddress` |
-| 香港劳务经历 | `workedHongKong`、`hkEmployer`、`hkExitDate` |
-| 语言及技能 | `cantonese`、`mandarin`、`english`、`otherLanguages`、`certificates`、`hobbies` |
-| 求职意向与联系 | `desiredJob1`、`desiredJob2`、`desiredJob3`、`desiredSalary`、`phone`、`alternateContact` |
-| 照片 | `photo`（压缩后的 JPEG data URL） |
-| 导入原 PDF | `sourcePdfData`（PDF data URL）、`sourcePdfDirty`（导入后是否编辑过） |
-| 重复经历 | `educationHistory[]`：`period`、`school`、`major`、`qualification`；最多 2 条。`workHistory[]`：`period`、`employer`、`position`、`duties`；最多 4 条。 |
-| 系统字段 | `id`、`createdAt`、`updatedAt` |
+| Basic information | `name` (required), `gender`, `birthDate`, `age`, `height`, `weight`, `marital`, `hometown`, `health`, `education`, `permit`, `idNumber`, `idValidity`, `idAddress`, `currentAddress` |
+| Hong Kong employment | `workedHongKong`, `hkEmployer`, `hkExitDate` |
+| Languages and skills | `cantonese`, `mandarin`, `english`, `otherLanguages`, `certificates`, `hobbies` |
+| Preferences and contacts | `desiredJob1`, `desiredJob2`, `desiredJob3`, `desiredSalary`, `phone`, `alternateContact` |
+| Photo | `photo`, compressed JPEG data URL |
+| Imported source PDF | `sourcePdfData`, PDF data URL; `sourcePdfDirty`, whether fields changed after import |
+| Education history | `educationHistory[]`: `period`, `school`, `major`, `qualification`; maximum two |
+| Work history | `workHistory[]`: `period`, `employer`, `position`, `duties`; maximum four |
+| System fields | `id`, `createdAt`, `updatedAt` |
 
-照片会缩小到最长边不超过 1,000px，并以 JPEG 质量 0.82 存储。
+Photos were resized to at most 1,000 px on the longest edge and encoded at JPEG quality 0.82.
 
-### 7.2 PDF 识别与预览规则
+### 7.2 Historical PDF recognition and preview
 
-- PDF.js 读取每页文本，并依据固定的 A4 模板坐标区域定位文字；若某页可提取文本少于 18 项且页面像扫描件，则以 2.5 倍渲染并调用 Tesseract 中文简繁体及英文识别。
-- 识别覆盖姓名、性别、身高、体重、出生年月、年龄、婚姻、籍贯、健康、学历、身份证信息、地址、香港经历、教育/工作经历、其他语言、证书、爱好、求职意向、期望薪金、电话等字段；通行证、香港工作经历和三种语言熟练度通过模板复选框位置/图像打分判断。
-- 仅首屏模板特定坐标尝试裁出照片；扫描识别并非对任意表格版式通用，表格版式变化、扫描清晰度及复选标记会影响识别率，必须人工核对。识别不到的字段留用当前表单值或空值，结果不会自动视为准确。
-- 上传 PDF 上限 25 MB；原始 PDF 会在浏览器以 data URL 保存。若导入 PDF 且未编辑字段，预览/打印使用原始 PDF；编辑后预览使用模板背景图和文字覆盖层。
-- 非导入 PDF 的打印页面将字段叠在 `worker-registration-template.png` 的 A4 背景上。模板内的长工作事项简介、证书、特长爱好超过代码设定长度时被移到附加页（而不是扩大原表单元格）；其他字段按固定位置填入。期望薪金有缩放适配。
-- PDF.js 4.10.38、Tesseract.js 5 从 CDN 懒加载；首次使用识别需要联网。PDF 数据和照片仍在浏览器本机处理/保存，源代码没有上传到服务器识别的实现。
+- PDF.js extracted text using fixed A4-template coordinate regions. Pages with fewer than 18 extracted text items that resembled scans were rendered at 2.5× for Tesseract simplified/traditional Chinese and English OCR.
+- Recognized fields included identity, physical information, education, addresses, Hong Kong experience, histories, languages, skills, job preferences, salary, and contacts. Permit/employment/language-proficiency checkboxes used template positions and image scoring.
+- Photo cropping only targeted particular first-page template coordinates. Recognition was not universal: layout changes, image quality, and checkbox marks affected results. Unrecognized fields retained current values or remained empty; review was required.
+- PDFs were limited to 25 MB and stored as browser-local data URLs. An imported unedited PDF was used directly for preview/printing; edited forms used template-background text overlays.
+- New forms printed over `worker-registration-template.png`. Overlong duties, certificates, and hobbies moved to an additional page; other fields used fixed positions. Desired salary had text scaling.
+- PDF.js 4.10.38 and Tesseract.js 5 loaded lazily from CDNs. Initial recognition required internet access. No server upload/OCR implementation was confirmed.
 
-## 8. 当前数据存储
+The original background, coordinates, and OCR source were not provided to this rebuild; see the README for present limitations.
 
-| 数据 | 存储位置 | 键/结构 | 当前结果 |
+## 8. Historical storage
+
+| Data | Location | Key/structure | Consequence |
 |---|---|---|---|
-| 劳务单 | `localStorage` | `zy-order-desk-v1`，JSON 数组 | 当前浏览器/站点来源域内；清理站点数据会丢失；不与其他访问者同步 |
-| 劳工资料 | IndexedDB v1 | 数据库 `zy-worker-register-v1`，object store `workers`，keyPath `id` | 当前浏览器本地；照片及导入 PDF 以 data URL 随记录保存 |
-| 劳工资料备份 | 用户下载文件 | `zy-worker-registration-backup-YYYY-MM-DD.json`，含 `format`、`version:1`、`exportedAt`、`workers` | 仅下载导出；当前 UI 未提供导入恢复 |
-| 静态页面资源 | Service Worker Cache | `zy-order-desk-v7` | 应用壳和模板离线缓存；不是业务数据同步 |
+| Orders | localStorage | `zy-order-desk-v1`, JSON array | Browser/origin-local; clearing site data loses records; no visitor synchronization |
+| Workers | IndexedDB v1 | `zy-worker-register-v1`, store `workers`, keyPath `id` | Photos/source PDFs stored as data URLs with records |
+| Worker backup | Downloaded JSON | `zy-worker-registration-backup-YYYY-MM-DD.json`, `format`, `version:1`, `exportedAt`, `workers` | Export only; no historical restore UI |
+| Static assets | Service Worker Cache | `zy-order-desk-v7` | Offline shell/template, not business-data synchronization |
 
-首次在某浏览器加载且尚无 `zy-order-desk-v1` 时，代码会写入两条示例劳务单。之后每个浏览器独立维护自己的本地数据。
+On first load without the order key, the original application inserted two example orders. Each browser then maintained its own records. The shared rebuild starts empty and does not insert these samples.
 
-## 9. 已实现、受限及未实现
+## 9. Historical capabilities and limitations
 
-### 已实现
+### Implemented in the original application
 
-- 单条和批量原单输入、启发式提取、人工修订及原文保留。
-- 单号生成/编辑、建议全包价、价格状态、按职位搜索及状态筛选。
-- 今日总览、全量劳务单数据库、日期分组、公司单独立编辑、原单/公司单折叠查看、复制发布文案、删除确认。
-- 劳工资料填写、照片上传、教育/工作经历增删、编辑、删除、模板预览、浏览器打印/PDF、JSON 备份下载、已填模板 PDF 的本地提取/OCR。
-- PWA manifest 与 Service Worker 应用外壳缓存。
+Single/batch source entry, heuristic extraction, manual review, source retention, code generation/editing, price suggestions/status, position search/filtering, daily overview, date-grouped full lists, company editing/copying, deletion confirmations, worker forms/photos/histories, template preview, browser printing, JSON backup downloads, template-specific PDF extraction/OCR, and PWA shell caching.
 
-### 当前实现的边界/未发现
+### Historical boundaries or unconfirmed features
 
-- 没有共享数据库或远程持久化：公开链接只共享网页入口，不共享每个浏览器的订单、劳工资料、照片或编辑结果。
-- 没有账户登录、权限角色、多人协同、跨设备同步、云端备份或服务端审计记录。
-- 没有订单数据导出/恢复功能；劳工 JSON 当前只有下载备份，没有导入恢复按钮/流程。
-- 没有对任意版式登记 PDF 的通用识别保证；当前定位器围绕提供的固定登记表模板，并且扫描结果需要人工确认。
-- 劳务单预览对话框的函数/HTML 存在，但当前没有从卡片可见触发入口。
-- 搜索只匹配职位名称；没有按日期、雇主、工资等搜索条件或高级筛选。
-- 没有分页或服务器端查询；所有劳务单由本地数组读取并在前端渲染。
-- 是否有真实使用者数据或其他浏览器数据，无法从静态源码确认；此文不假定任何现存记录内容。
+- No shared database/remote persistence. A public link shared the frontend, not browser records, photos, or edits.
+- No login, roles, collaboration, cross-device synchronization, cloud backup, or server audit trail.
+- No order export/restore; worker JSON download had no restore flow.
+- No arbitrary-layout PDF recognition guarantee; the supplied fixed template was required, with manual review.
+- Source-preview code existed without a visible card trigger.
+- Search covered title only, without date/employer/salary filters or advanced search.
+- No pagination/server queries; local arrays were rendered in the frontend.
+- Static source could not establish whether real user records existed in other browsers. This document assumes no specific record contents.
 
-## 10. Codex 重建时必须保留的既有行为
+## 10. Reconstruction invariants from the original specification
 
-1. 不改变月薪原始格式；只对全包价使用 w 显示/换算。
-2. 职位识别依据字段标签、职位关键词和全文候选判断，不使用固定行号。
-3. 不将原单底部单独数字或 `DJ: 数字` 当作月薪/全包价；保留原文以供人工校对。
-4. 将工作时间/时间安排放进 `hours`，不要并入工作要求；工作要求与工作内容分别存储。
-5. 空/0 全包价才是待确认；非零全包价为已完成。注意旧记录加载时直接沿用已有状态，这是现有实现的一个边界。
-6. 原单与公司单分开保存；编辑公司单不能覆盖 `raw`。
-7. 劳务与劳工数据目前按浏览器本地隔离。若后续决定共享，必须另行设计迁移/同步方案；此文不把数据库或同步功能写成现有能力。
-8. 劳工 PDF 背景模板、字段坐标、长文本限制、浏览器打印和导入 PDF 原文预览行为属于现有版式约束。
+1. Preserve salary formatting; use `w` formatting/conversion only for package prices.
+2. Recognize positions from labels, job keywords, and whole-document candidates rather than fixed rows.
+3. Do not treat standalone footer amounts or `DJ: number` as salary/package price; retain source text for review.
+4. Store schedules in `hours`; keep requirements and duties separate.
+5. Empty/zero package price is pending; nonzero is complete. Historical loading trusted saved status.
+6. Store source and company fields separately. Company editing must not overwrite `raw`.
+7. Historical browser isolation was a boundary, not shared-storage capability. Sharing required a separate migration/synchronization design, now documented elsewhere in this repository.
+8. Original PDF backgrounds, coordinates, text limits, browser printing, and source-PDF preview were layout constraints; missing assets must not be represented as implemented.
 
-## 11. 待确认项（当前源码无法确定）
+## 11. Originally unresolved questions
 
-- 目标 Codex 重建时是否继续采用浏览器本地存储，或之后另行迁移到共享数据库；现有公开站点并未提供共享存储。
-- `worker-registration-template.png` 是否与用户最初提供的 PDF 在每一处细节上完全一致；代码将其作为打印背景，但源码本身不能证明像素级一致。
-- OCR 对未见过的表格、低分辨率扫描件、旋转页或多栏变体的识别覆盖率；当前代码没有通用保证。
-- 全包价解析对薪资字段中多个数字的业务意图：当前只取第一个匹配数值作为建议计算基数。
+- Whether the rebuild would remain local-only or move to shared storage. The current shared architecture is documented in the README.
+- Whether the registration PNG matched the originally supplied PDF pixel-for-pixel; source alone could not prove this.
+- OCR coverage for unseen layouts, low-resolution scans, rotated pages, or multi-column variants; no universal guarantee existed.
+- The intended price-suggestion base when salary contained multiple numbers: the original implementation used the first numeric match.

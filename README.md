@@ -1,78 +1,78 @@
-# 卓亚港澳劳务系统 / ZY Labour System
+# ZY Labour System
 
-按 `docs/migration-spec.md` 重建的劳务单和劳工管理系统，现已加入**账号登录、团队共享资料、Supabase免费云端适配、SQLite自托管后备和编辑冲突检查**。白色页面背景；不再以浏览器本地数据作为业务资料源。
+A labour-order and worker management system rebuilt from the [original migration specification](docs/migration-spec.md). The current application supports account login, shared team records, a free Supabase cloud adapter, a Python/SQLite self-hosting fallback, and editing conflict detection. Business records are stored in the shared database; the interface uses a white background.
 
-## 本地开发
+Website: https://dongqimo.github.io/zy-labour-system/
 
-Python 3.12+、Node.js（仅运行语法检查）。运行服务不需要第三方Python依赖。
+## Local development
+
+Requires Python 3.12+ and Node.js for checks. The Python service uses the standard library only.
 
 ```sh
 python3 server/app.py create-admin --username owner
 npm start
 ```
 
-第一条通过私密交互提示建立管理员（至少12字符密码，无默认密码）。`npm start` 在本机端口8080启动开发HTTP服务；本地 `--dev` 只允许回环监听，生产必须用HTTPS和Secure Cookie。默认库为被Git忽略的 `var/zy.sqlite3`。不要把数据库或真实资料提交到GitHub。
+The first command creates an administrator through a private password prompt (minimum 12 characters; no default password). The development HTTP service listens on loopback port 8080. Production requires HTTPS and Secure cookies. The default database, `var/zy.sqlite3`, is ignored by Git. Never commit databases or real business records.
 
-管理账号登录后从「账号设置」开通员工。双方共享订单和劳工资料；员工可以增删改共享业务资料，只有管理员能管理账号。列表每5秒轮询，正在填写的表单不会被轮询替换；版本冲突拒绝保存并保留当前输入。本地会话存于HttpOnly Cookie；原单不能随公司单编辑而变化。
+Administrators manage staff through Account settings. Both roles share and edit business records; only administrators manage accounts. Lists poll every five seconds without replacing active forms. Stale writes are rejected while preserving user input. Local sessions use HttpOnly cookies. Editing a company order does not change its source text.
 
-## 验证
+## Validation
 
 ```sh
 npm run check
 npm test
+npm run test:parser
 python3 scripts/smoke.py
-```
-
-API测试使用标准库临时服务器/数据库。浏览器测试需要已有的Playwright Python包及 `/usr/bin/chromium`，自动启动临时服务，验证两个独立账号共享订单/劳工、重新载入、编辑冲突、角色权限、退出与白色手机布局；不生成截图或正式账号。
-
-## 免费网页式系统部署
-
-默认 **免费静态托管（GitHub Pages或Cloudflare Pages）+ Supabase Free**。见 [免费部署说明](docs/deployment.md)。不再使用付费Render方案；未建立付费资源或公开站点。开通仍需用户拥有并配置自己的Supabase及网页托管账号；免费服务有容量/休眠限制，不保证永久无限使用。
-
-网页填公开项目网址和publishable/anon key，绝不能放service_role、sb_secret或数据库密码。生产使用Supabase邮箱密码登录；账号管理用受限Edge Function，业务RPC检查实时团队身份。静态云端会话保存在当前标签页sessionStorage并定时刷新；SQLite后备模式使用HttpOnly Cookie。关闭标签页后需要重新登录；这两种认证模式不是同一套账号。
-
-```sh
 npm ci --ignore-scripts
 npm run test:postgres
 npm run test:transport
 ```
 
-固定版本PGlite仅作为开发测试依赖，运行网页不需要。PostgreSQL测试包含真实权限、原子恢复、暂停写入和 **PostgreSQL → SQLite → PostgreSQL** 往返；transport/Edge测试使用模拟HTTP，不代表真实Supabase托管服务已验证。Node24用于Edge TypeScript测试。原有Python/SQLite后备测试仍保留。
+API tests use temporary standard-library servers and databases. Browser tests require Python Playwright and `/usr/bin/chromium`; they start a temporary service and check independent accounts, shared records, reload persistence, conflicts, permissions, logout, responsive layouts, recognition, batch forms, and interface translation. They create no production accounts or screenshots.
 
-## 随时迁移业务数据库
+The pinned PGlite dependency is for development tests only. PostgreSQL tests cover permissions, transactional restores, write suspension, and PostgreSQL → SQLite → PostgreSQL transfers. Transport and Edge Function tests use mock HTTP and do not establish hosted Supabase availability. Edge TypeScript tests require Node.js 24. Python/SQLite fallback tests remain supported.
 
-管理员「账号设置」可暂停写入、导出完整业务资料、恢复到空数据库。统一JSON包括订单、劳工、照片、附件和原有业务字段；不包含账号密码或会话。写入暂停在数据库层执行，恢复在事务中验证并提交。32MB以上不支持浏览器直接导入。
+## Free website deployment
 
-详见 [迁移与回退步骤](docs/database-migration.md)。`scripts/portable.py`提供校验/哈希、SQLite导出与空库恢复。已验证跨库业务资料完整往返；更换供应商的账号需重新开通，真实云端及大数据量仍需上线验收。
+The default architecture is **static hosting (GitHub Pages or Cloudflare Pages) + Supabase Free**. See the [deployment guide](docs/deployment.md). There is no requirement for paid Render hosting. Free services have storage, traffic, invocation, and inactivity limits; unlimited or permanently free operation is not guaranteed.
 
-## 业务与迁移边界
+Frontend configuration contains only the public project URL and publishable/anon key. Never expose service-role keys, `sb_secret` keys, database passwords, or administrator credentials. Cloud authentication uses Supabase email/password login. Account provisioning requires the restricted `team-admin` Edge Function; business RPCs check current team membership. Cloud sessions use tab-scoped sessionStorage with refresh; SQLite sessions use HttpOnly cookies. These providers have separate accounts.
 
-已包含今日统计、全量订单日期分组、职位搜索/状态筛选、单条/批量启发式整理、公司单号及全包价建议、公司单编辑/复制/删除、劳工登记/照片压缩/经历列表、登记表预览/浏览器打印、劳工JSON备份。繁简转换按需加载CDN OpenCC，失败明确提示保留原文，识别需人工核对。
+## Portable business data
 
-共享库首次启动为空，不写入演示资料，不自动上传旧浏览器资料。旧 localStorage/IndexedDB 保持原样。管理员可明确确认后导入**同一浏览器来源**的旧资料，重复ID/单号跳过。新域名不能访问旧域名资料；跨来源迁移需另行处理。完整服务备份使用 `python3 server/app.py backup --output 私密新路径.sqlite3`，不是劳工JSON导出。
+Administrators can suspend writes, export all business records, and restore into an empty database through Account settings. The portable JSON includes orders, workers, photos, attachments, and existing business fields, but excludes account passwords and sessions. Write suspension is enforced in the database; restore validates and commits transactionally. Browser imports are limited to 32 MB.
 
-迁移文档没有附原版背景模板、固定坐标或OCR源码；PDF识别/原始PDF导入/原文预览仍未实现，当前列印使用重建表格。共享版停用旧离线应用缓存，以免过期本机版误报保存成功；暂不支持离线操作。
+See [database migration and rollback](docs/database-migration.md). `scripts/portable.py` provides validation, hashes, SQLite export, and empty-database restore. Cross-provider business-data round trips are tested. Accounts must be provisioned again or migrated separately; hosted services and large datasets require deployment-specific acceptance checks.
 
-当前测试验证的是此环境的临时服务，不代表公开部署、真实HTTPS服务、远程磁盘持久化或平台恢复已验证。
+## Features and boundaries
 
-## 全文识别与发布检查
+Features include today's statistics, date-grouped order lists, position search, status filters, single/batch recognition, company order numbers, package-price suggestions, company order editing/copying/deletion, worker registration, compressed photos, education/employment histories, registration preview, browser printing, and worker JSON backup. Traditional-to-simplified conversion lazily loads OpenCC from a CDN; failure is reported and the original text is retained for review.
 
-`dist/order-parser.js`先扫描整份原单、识别订单边界及段落，再分类提取职位、雇主、薪资、性别、年龄、语言、工作内容/要求、工时、休息和面试。字段不按固定行号读取。支持繁简体标签、贴合的`岗位【编号+职位】`、编号列表、换行正文和无标签岗位摘要。批文名称和面试视频说明与实际职位分开。
+A new shared database starts empty. It does not create demo records or automatically upload legacy browser data. Existing localStorage/IndexedDB data remains untouched. Administrators can explicitly import legacy data from the same browser origin; duplicate IDs/codes are skipped. A new domain cannot access another origin's browser storage. Full SQLite backups use `python3 server/app.py backup --output /private/new-backup.sqlite3`; worker JSON export is not a full service backup.
 
-单条发现多份原单时阻止保存并提供转批量入口；批量共用结构分单规则，支持明确分隔和多岗位/薪资块。无法确认的职位、性别、薪资与冲突信息提示人工核对，不用短句或默认不限补足。性别最终仅「男」「女」「男女不限」，劳工登记字段不受订单规则影响。
+The original registration background template, field coordinates, and OCR source were not supplied. PDF recognition, original-PDF import, and original-PDF preview remain unimplemented in this rebuild; printing uses a reconstructed table. Legacy offline caches are disabled to avoid false save confirmations. Offline business operations are unsupported.
 
-源编号在分类前提取完整字母前缀，完整编号不带入公司单。例如合成源编号`ABC-20991234`对应`ZY-26-1103-13 ABC`，`QY-20992345`对应`ZY-26-1103-14 QY`。前缀不截短；流水按ZY基础单号统一递增，附加上家字母不导致重新从01计数。币种及常见标准编号不当作上家编号。公司单所有文本字段去除【】、方括号等标签括号。
+## Whole-document recognition and publication checks
 
-主薪资金额、币种、千位格式、周期保留在薪资字段；底薪分解、津贴、奖金、佣金等明确薪水组成进入备注，并保留相应金额。餐食及住宿事实可保留，租金扣款、上家全包/总价、劳务/办证/保险等费用报价整体排除，不能因位于薪资行就放行。卓亚全包价仍是独立输入/建议值。原单保留原金额用于内部核对。`上6休1`保留原休息周期，不虚构固定月休；跨行奖金条件及过港/视频面试信息分类保留。
+`dist/order-parser.js` scans the entire source document, determines order and paragraph boundaries, and then classifies positions, employers, salary, gender, age, language, duties, requirements, working hours, rest arrangements, and interviews. It does not rely on fixed line numbers. It supports simplified/traditional labels, adjacent source IDs and job titles, numbered/bulleted paragraphs, decorative prefixes, inline or wrapped headings, and unlabelled role summaries. Approval titles and interview-video instructions are separated from actual positions.
 
-新单保存及发布复制前共用验证：多单混入、未确认职位/性别、未确认主薪资（发布时）、非法或重复基础单号、标签括号、完整上家编号、上游报价残留都会阻止相应操作。复制文案保持业务数据语言，不随界面语言翻译。
+Single-entry mode blocks mixed orders and offers transfer to batch mode. Batch mode uses the same segmentation rules. Uncertain positions, gender, salary, or conflicts require review rather than guessed defaults. Order gender is restricted to the three Chinese business values meaning male, female, and unrestricted; worker registration fields are unaffected.
 
-旧单不自动全量重新解析或覆盖人工修订。编辑页的「按原单重新识别（预览）」显示候选结果，并保留当前卓亚全包价；核对后保存才写回，原单不变。仅历史V格式单号/确定标签残片继续使用窄范围修复。新识别记录用纯字符串保存parserVersion、parsedSnapshot、manualFields和sourcePrefix，便于区分识别基线与人工修改，不要求改变数据库JSON存储结构。
+All leading supplier letters are extracted before source-ID removal. For example, synthetic ID `ABC-20991234` produces `ZY-26-1103-13 ABC`; the prefix is not truncated. Sequence numbers use the base ZY code regardless of supplier suffix. Currency and common standard identifiers are excluded. Source label brackets are removed from company fields.
 
-验证 `npm run test:parser`（既有回归、12组顺序变化、复合编号、段落性别、薪水组成、混单与费用保密），`python3 scripts/smoke.py`（两账号共用、完整批量表单、中英保留输入、混单拦截、上家全字母及旧单预览后保存）。这些是启发式规则，不保证任意未知版式准确，工作人员仍需核对。修改dist后推送main自动发布。
+Main salary retains its currency, amount, thousands separators, period, and trailing `+`, including `HK$`. Base-pay breakdowns, allowances, bonuses, and commissions go into notes with their amounts. Meal and accommodation facts may remain, but rent deductions, upstream package prices, monetary footers/expressions, agency fees, permit fees, and insurance quotations are excluded. ZY's package price remains a separate input/suggestion. Internal source text retains original amounts for review. Rest cycles are preserved without inventing monthly totals.
 
-## 介面語言與完整批量工作台
+Save and publication share checks for mixed orders, uncertain positions/gender, missing publication salary, invalid or duplicate base codes, bracket remnants, full supplier IDs, and upstream quotation remnants. Copied company text keeps its business language regardless of the interface language.
 
-日期旁的English／中文按鈕切換操作介面，登入頁及對話框也可切換；語言偏好只保存在本瀏覽器。UI文字原位更新，不重建表單，因此未保存輸入、密碼、原單、已選性別及批量修改均保留。業務內容、公司發布文案、姓名、薪資和性別值不翻譯。
+Existing records are not automatically reparsed or overwritten. The editor's Re-recognize source (preview) action proposes fields while preserving the current ZY package price. Only confirmation and save writes changes; source text remains unchanged. Narrow legacy code/label repairs remain separate. Recognition metadata (`parserVersion`, `parsedSnapshot`, `manualFields`, `sourcePrefix`) uses string fields compatible with existing JSON storage.
 
-批量模式採用與單條相同的左右雙欄，左側逐份核對原文，右側由同一orderFields生成完整表單。每份可編輯單號、職位、雇主、薪資、性別、年齡、語言、工時、班次、面試、休息、內容、要求、備註和卓亞全包價。切換份數保留修改，手動價格不再隨薪資自動改動；保存檢查必填/重複單號並按每份價格決定draft或ready，整批一次提交。窄屏雙欄與單條一樣轉為單欄。
+Recognition remains heuristic and requires staff review. Parser tests include reordered documents, compound IDs, paragraph gender, salary components, mixed-order safeguards, decorative prefixes, HK-dollar formats, and fee confidentiality. Changes to `dist` pushed to `main` trigger website deployment.
+
+## Interface language and complete batch workspace
+
+The English/Chinese button beside the date changes the interface, including login and dialogs. The preference is stored in the current browser. Text updates in place, preserving unsaved fields, passwords, source text, gender selections, and batch edits. Business records, publication text, names, salaries, and stored gender values are not translated.
+
+Batch and single entry share the same two-column workspace: source review on the left, the complete `orderFields` form on the right. Each item exposes code, position, employer, salary, gender, age, language, hours, shift, interview, rest, duties, requirements, notes, and ZY package price. Item switching preserves edits; salary edits do not overwrite manually entered prices. Save validates required fields and unique codes, determines each item's `draft`/`ready` status from its price, and submits the batch once. Narrow screens use one column.
+
+See the [update log](docs/update-log.md) for recent changes. The migration specification describes the historical source application; this README describes the rebuilt shared system. Automated local tests do not substitute for verifying production HTTPS, hosted Auth/Edge Functions, remote persistence, or provider recovery.
