@@ -1,6 +1,9 @@
 /* UI-only localisation. Never rerenders a form or translates business data. */
 (function(){
  const pairs=[
+ ['搜索岗位或公司单号','Search job title or company order number'],['按日期查找劳务单','Find Orders by Date'],['数字表示当天录入的单数，点击日期筛选；可同时使用搜索和状态筛选。','Counts show orders entered on each date. Combine a date with search and status filters.'],['选择日期','Select Date'],['清除日期筛选','Clear Date Filter'],['当前筛选日期','Selected Date'],['上个月','Previous Month'],['下个月','Next Month'],['周一','Mon'],['周二','Tue'],['周三','Wed'],['周四','Thu'],['周五','Fri'],['周六','Sat'],['周日','Sun'],
+ ['劳务单','Labour Orders'],['劳工信息','Worker Information'],
+ ['字段来源与待核对清单','Field Sources and Review Checklist'],['来源为识别时的原文片段；手动修改后请重新核对。','Sources show recognised text excerpts. Review again after manual changes.'],['未发现额外核对项目，仍请确认识别结果。','No additional review items found. Please still verify the results.'],['未分类内容','Unclassified Content'],['未识别年龄要求，请核对原单','Age requirement not recognised. Check the source.'],['未识别工作时间，请核对原单','Working hours not recognised. Check the source.'],['休息周期不明确，请确认是每周还是每月','Rest period is unclear. Confirm whether it is weekly or monthly.'],['部分原单内容尚未分类，请核对未分类内容','Some source text is unclassified. Review the unclassified content.'],
  ['卓亚港澳劳务','ZY Hong Kong & Macau Labour'],['卓亚港澳劳务系统','ZY Labour Management System'],['工作台 /','Workspace /'],['工作台','Workspace'],
  ['今日劳务单总览','Today’s Orders'],['劳务单数据库','Order Database'],['劳工登记表','Worker Registration'],['已登记劳工','Registered Workers'],['整理新劳务单','Prepare New Order'],['编辑公司单','Edit Company Order'],
  ['每一份机会，都值得认真整理。掌握今日劳务单进度。','Organise every opportunity. Track today’s order progress.'],['所有劳务单集中管理，原单与公司单随时核对。','Manage all orders and compare source and company versions.'],

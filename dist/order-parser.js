@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='5';
+ const VERSION='6';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?=\D)/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -107,8 +107,10 @@
  const moneyToken='(?:HKD|HK[$]|HK|USD|RMB|CNY|MOP|CAD|EUR|GBP|港币|港幣|港元|人民币|人民幣|澳门币|澳門幣|[$￥¥])?\\s*\\d[\\d,]*(?:\\.\\d+)?(?:\\s*[-~～至]\\s*\\d[\\d,]*(?:\\.\\d+)?)?\\s*(?:HKD|USD|RMB|CNY|MOP|港币|港幣|港元|元|[wW万萬])?(?:\\s*[/／](?:月|年|日|天|小时|小時|时|時))?';
  const quotePattern=/全包|包价|包價|打包价|打包價|总价|總價|總費|总费|底价|底價|上家价|上家價|上游价|上游價|成本价|成本價/;
  const costPattern=/租金|住宿(?:扣|费|費)|住(?:宿)?扣|宿舍(?:扣|费|費)|劳务|勞務|办证|辦證|保险|保險|中介|佣介|管理费|管理費|服务费|服務費|报名费|報名費|收费|收費|费用|費用|报价|報價/;
+ const deductionPattern=/租金|住宿(?:扣|费|費)|住(?:宿)?扣|宿舍(?:扣|费|費)|餐费|餐費|伙食扣|扣款|扣薪|扣工资|扣工資|扣\s*\d/;
+ const upstreamFeePattern=/劳务|勞務|办证|辦證|保险|保險|中介|佣介|管理费|管理費|服务费|服務費|报名费|報名費|收费|收費|费用|費用|报价|報價/;
  const compensationPattern=/津贴|津貼|补贴|補貼|补助|補助|奖金|獎金|佣金|提成|加班费|加班費|底薪|基本工资|基本工資|底\d/;
- function clauses(value){return String(value??'').split(/[\n；;。]|(?<!\d)[，,]|[，,](?!\d)/).map(s=>s.trim()).filter(Boolean)}
+ function clauses(value){return String(value??'').replace(/(?<=[\d%）)])\s*(?=住宿扣|住扣|宿舍扣|扣款)/g,'；').split(/[\n；;。]|(?<!\d)[，,]|[，,](?!\d)/).map(s=>s.trim()).filter(Boolean)}
  function unique(parts){return [...new Set(parts.filter(Boolean).map(s=>s.trim()).filter(Boolean))]}
  function stripSourcePackage(value,preserveSalary=true){
   const source=String(value??'');if(!quotePattern.test(source))return source;
@@ -123,6 +125,7 @@
   return unique(clauses(stripSourcePackage(value,false)).map(part=>{
    if(removeBarePrice&&sourceQuoteLine(part))return '';
    part=cleanBrackets(part);if(quotePattern.test(part))return '';
+   if(allowCompensation&&deductionPattern.test(part)&&!upstreamFeePattern.test(part))return part;
    if(costPattern.test(part)){
     const marker=part.match(costPattern);const hasHousing=/住宿|宿舍|住扣/.test(marker[0]);let preceding=part.slice(0,marker.index);preceding=preceding.replace(new RegExp(moneyToken+'\\s*$','i'),'').replace(/(?:扣|需付|另收|另加|收取|支付|含|加|实际|實際|大约|大約|约|約)\s*$/,'').trim();const housing=hasHousing&&!/住宿|宿舍/.test(preceding)?(/宿舍/.test(marker[0])?'宿舍':'住宿'):'';part=(preceding+housing).replace(/(?:扣|需付|另收|收取|支付|实际|實際|大约|大約|约|約)\s*$/,'').trim();
    }
@@ -147,10 +150,11 @@
    for(const part of clauses(text)){if(costPattern.test(part)||quotePattern.test(part))continue;const found=part.match(strict);if(found){offset=text.indexOf(part)+found.index;lead=found;break;}}
   }
   if(!lead||!lead[0].match(/\d/))return {salary:'',notes:[]};
-  const salary=lead[0].trim()+(text.slice(offset+lead[0].length).startsWith('+')&&!/^\+\d/.test(text.slice(offset+lead[0].length))?'+':''),before=text.slice(0,offset).replace(/(?:工资|工資|月薪|薪金|薪酬|薪资|薪資)\s*[:：]?\s*$/,'');
+  const main=lead[0].trim()+(text.slice(offset+lead[0].length).startsWith('+')&&!/^\+\d/.test(text.slice(offset+lead[0].length))?'+':''),before=text.slice(0,offset).replace(/(?:工资|工資|月薪|薪金|薪酬|薪资|薪資)\s*[:：]?\s*$/,'');
   let rest=text.slice(offset+lead[0].length).replace(/^[\s+，,；;]+/,'').replace(/^[（(]([\s\S]*)[）)]$/,'$1');
   const notes=clauses([before,rest].filter(Boolean).join('；')).map(part=>cleanCompanyText(part,true,true)).filter(Boolean);
-  return {salary,notes};
+  const earnings=notes.filter(part=>compensationPattern.test(part)&&!deductionPattern.test(part));
+  return {salary:unique([main,...earnings]).join('；'),main,notes:notes.filter(part=>!earnings.includes(part))};
  }
  function cleanField(key,value){
   if(typeof value!=='string')return value;
@@ -198,7 +202,7 @@
    if(compact){titles.push({value:compact[1],rank:0});push('salary',compact[2]);section='';continue;}
    if(/^(?:男性|女性|男|女)(?=[，,\s])/.test(line)){push('requirements',line);continue;}
    if(/^(?:主要做|能接受)/.test(line)){push('workContent',line);continue;}
-   if(/^(?:住扣|住宿扣|宿舍扣)/.test(line)){push('notes',line.replace(/.*?(?:必须住|必須住).*/, '必须住宿'));continue;}
+   if(deductionPattern.test(line)&&!matchLabel(line)&&!upstreamFeePattern.test(line)){push('notes',line);continue;}
    const tagged=matchLabel(line);
    if(tagged){
     section=tagged.key;
@@ -254,17 +258,48 @@
   const parts=splitOrders(input),warnings=[];
   if(parts.length>1)return {parts,order:null,warnings:['检测到多份原单，请使用批量录入或拆分后处理']};
   const order=parseOne(parts[0]||'',code);
-  const payValues=unique(String(input||'').split(/\r?\n/).map(matchLabel).filter(tag=>tag?.key==='salary').map(tag=>extractPay(tag.value).salary));
+  const payValues=unique(String(input||'').split(/\r?\n/).map(matchLabel).filter(tag=>tag?.key==='salary').map(tag=>extractPay(tag.value).main||extractPay(tag.value).salary));
   if(payValues.length>1){order.salary='';warnings.push('识别到多组薪资，请人工核对或拆分原单');}
   if(!order.title)warnings.push('未可靠识别职位，请人工核对');if(!order.gender)warnings.push('性别不明确或有冲突，请人工选择');if(!order.salary)warnings.push('未可靠识别主薪资，请人工核对');
-  return {parts,order,warnings};
+  const review=reviewOrder(input,order);
+  warnings.push(...review.warnings);
+  return {parts,order,warnings:unique(warnings),sources:review.sources,unclassified:review.unclassified};
+ }
+ function reviewOrder(input,order){
+  const warnings=[],sources={},lines=recognitionText(sanitizeRaw(input)).split('\n').filter(Boolean);
+  const fields=['title','employer','salary','gender','age','language','hours','shift','rest','workContent','requirements','interview','notes'];
+  const unknown=[];
+  for(const line of lines){
+   const tag=matchLabel(line);let matched=false;
+   for(const key of fields){
+    const value=String(order[key]||'');
+    const fragments=clauses(value).filter(v=>v.length>1);
+    const relevant=tag?.key===key||(key==='salary'&&tag?.key==='compensation')||fragments.some(v=>line.includes(v))||(key==='gender'&&normalizeGender('',line)===value&&!!value)||(key==='salary'&&compensationPattern.test(line)&&!upstreamFeePattern.test(line));
+    if(relevant){(sources[key]??=[]).push(line);matched=true;}
+   }
+   if(!matched&&!tag&&!/^(?:新单|新單|更新|高龄看过来|高齡看過來)/.test(line)&&!quotePattern.test(line)&&!sourceQuoteLine(line)&&!upstreamFeePattern.test(line)&&!/^#|^DJ/i.test(line))unknown.push(line);
+  }
+  for(const key of Object.keys(sources))sources[key]=unique(sources[key]);
+  if(!order.age)warnings.push('未识别年龄要求，请核对原单');
+  if(!order.hours)warnings.push('未识别工作时间，请核对原单');
+  if(/^休\s*\d+$/.test(String(order.rest||'').trim()))warnings.push('休息周期不明确，请确认是每周还是每月');
+  if(unknown.length)warnings.push('部分原单内容尚未分类，请核对未分类内容');
+  return {warnings,sources,unclassified:unique(unknown)};
  }
  function parse(input,code=''){const result=analyze(input,code);return result.order||{raw:sanitizeRaw(input),code,needsSplit:true,title:'',gender:'',salary:''}}
  function sanitizeCompany(order){
   const result={...order};
+  const deductions=[];
+  for(const key of ['requirements','workContent','hours','interview'])if(typeof result[key]==='string')result[key]=clauses(result[key]).filter(part=>{if(deductionPattern.test(part)&&!upstreamFeePattern.test(part)&&!quotePattern.test(part)){deductions.push(part);return false;}return true;}).join('；');
+  if(deductions.length)result.notes=unique([result.notes,...deductions]).join('；');
   for(const key of ['title','employer','gender','age','language','hours','shift','rest','workContent','requirements','interview'])if(typeof result[key]==='string')result[key]=cleanBrackets(cleanCompanyText(result[key],!['age','hours','rest'].includes(key)));
-  const pay=extractPay(result.salary);if(typeof result.salary==='string')result.salary=pay.salary;
-  result.notes=unique([cleanCompanyText(result.notes,true,true),...pay.notes]).filter(Boolean).join('；');
+  const pay=extractPay(result.salary);
+  const notes=clauses(cleanCompanyText(result.notes,true,true));
+  for(let i=1;i<notes.length;i++)if(compensationPattern.test(notes[i])&&/(?:满|滿).*(?:月|年)|(?:入职|入職).*(?:后|後)|达到|達到/.test(notes[i-1])&&!costPattern.test(notes[i-1])){notes.splice(i-1,2,notes[i-1]+'，'+notes[i]);i--;}
+
+  const earnings=pay.salary?notes.filter(part=>compensationPattern.test(part)&&!deductionPattern.test(part)&&!upstreamFeePattern.test(part)&&!quotePattern.test(part)):[];
+  if(typeof result.salary==='string')result.salary=unique([pay.salary,...earnings]).join('；');
+  result.notes=unique([...notes.filter(part=>!earnings.includes(part)),...pay.notes]).join('；');
   result.notes=cleanBrackets(result.notes);if(typeof result.code==='string')result.code=cleanBrackets(result.code);if(typeof result.price==='string')result.price=cleanBrackets(result.price);if(result.sourcePrefix)result.code=companyCode(result.code,result.sourcePrefix);
   return result;
  }
@@ -276,7 +311,7 @@
   for(const key of ['title','employer','salary','gender','age','language','hours','shift','rest','workContent','requirements','notes','interview']){
    const value=String(order[key]||'');if(/[【】\[\]［］〔〕「」『』]/.test(value))errors.push('公司单不能含原单字段括号');
    if(sourceIdentifiers(value).length)errors.push('公司单不能含完整上家编号，只保留单号后的上家字母');
-   if(quotePattern.test(value)||costPattern.test(value))errors.push('公司单仍有原单报价或费用信息，请核对');
+   if(quotePattern.test(value)||clauses(value).some(part=>upstreamFeePattern.test(part)||(costPattern.test(part)&&!(key==='notes'&&deductionPattern.test(part)))))errors.push('公司单仍有原单报价或费用信息，请核对');
   }return unique(errors);
  }
  function repairLegacyOrders(records){
@@ -296,5 +331,5 @@
   view.employer=editorial(view.employer||'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'');
   return sanitizeCompany(view);
  }
- root.ZYOrderParser={parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
+ root.ZYOrderParser={reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
 })(globalThis);

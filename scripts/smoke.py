@@ -98,20 +98,23 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('autoParse()')
             assert admin.locator('#o-title').input_value()=='铲车/叉车起重车驾驶员（货仓）'
             assert admin.locator('#o-employer').input_value()=='香港某公司'
-            assert admin.locator('#o-salary').input_value()=='HKD17118'
+            assert admin.locator('#o-salary').input_value().startswith('HKD17118；')
             assert 'XR80080' not in admin.locator('#raw').input_value()
             notes=admin.locator('#o-notes').input_value()
-            assert not any(token in notes for token in ['23800','全包','2500'])
-            assert 'HKD500' in notes
-            assert '底15500+1618津贴' in notes
+            assert not any(token in notes for token in ['23800','全包'])
+            assert 'HKD500' in admin.locator('#o-salary').input_value()
+            assert '底15500+1618津贴' in admin.locator('#o-salary').input_value();assert '2500' in notes
             assert admin.locator('#o-code').input_value().endswith(' XR')
+            assert admin.locator('.recognition-review').count()==1
+            admin.locator('.recognition-review summary').click()
+            assert 'HKD17118' in admin.locator('.source-table').inner_text()
             admin.locator('#o-price').fill('3.7w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             company=admin.evaluate('publish(orders[0])')
             assert '工资待遇：HKD17118' in company
             assert '底15500+1618津贴' in company
             assert '卓亚全包价：3.7w' in company
-            assert not any(token in company for token in ['23800','2500'])
+            assert not any(token in company for token in ['23800'])
             assert admin.evaluate("orders[0].raw.includes('23800全包')")
             assert 'XR80080' not in admin.evaluate('orders[0].raw')
             assert admin.evaluate('orders[0].title')=='铲车/叉车起重车驾驶员（货仓）'
@@ -191,17 +194,34 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('#o-code').input_value()=='ZY-26-1103-81 SUPPLIER'
             assert admin.locator('#o-gender').input_value()=='男'
             assert admin.locator('#o-rest').input_value()=='上6休1'
-            assert admin.locator('#o-salary').input_value()=='$19000'
+            assert admin.locator('#o-salary').input_value()=='$19000；津贴：HKD500'
             assert admin.locator('#o-price').input_value()=='4.8w'
-            assert 'HKD500' in admin.locator('#o-notes').input_value()
-            assert '2500' not in admin.locator('#o-notes').input_value()
+            assert 'HKD500' in admin.locator('#o-salary').input_value()
+            assert '2500' in admin.locator('#o-notes').input_value()
             unchanged=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
             assert unchanged['title']=='（批文厨房帮工）'
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             saved=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
             assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
-            assert saved['title']=='砧板师傅' and saved['salary']=='$19000' and saved['raw']==source
+            assert saved['title']=='砧板师傅' and saved['salary']=='$19000；津贴：HKD500' and saved['raw']==source
             assert isinstance(saved['parsedSnapshot'],str) and isinstance(saved['manualFields'],str)
+            # Calendar date/code/status filters compose; navigation has two non-collapsible groups.
+            checks=admin.evaluate("""()=>{const saved=orders;const f={...filters.orders};
+              orders=[{...saved[0],id:'cal-a',code:'ZY-26-1101-01 QY',createdAt:'2026-11-01T12:00:00',title:'日历司机',status:'ready'},
+                      {...saved[0],id:'cal-b',code:'ZY-26-1102-02 CV',createdAt:'2026-11-02T12:00:00',title:'日历厨师',status:'draft'}];
+              filters.orders={q:'',s:'',date:''};go('orders');
+              const groups=document.querySelectorAll('.nav-group').length;
+              selectOrderDate('2026-11-01');const first=document.querySelectorAll('.card').length;
+              const count=document.querySelector('[data-date="2026-11-01"] small').textContent;
+              filters.orders.q='qY';listRender();const codeMatch=document.querySelectorAll('.card').length;
+              filters.orders.s='draft';listRender();const mismatch=document.querySelectorAll('.card').length;
+              filters.orders.s='';selectOrderDate('');const cleared=document.querySelectorAll('.card').length;
+              const noFold=!document.querySelector('#nav details');orders=saved;filters.orders=f;go('orders');
+              return {groups,first,count,codeMatch,mismatch,cleared,noFold};}""")
+            assert checks==dict(groups=2,first=1,count='1',codeMatch=1,mismatch=0,cleared=1,noFold=True),checks
+            admin.set_viewport_size({'width':390,'height':844});admin.evaluate("go('orders')")
+            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            admin.set_viewport_size({'width':1440,'height':1000})
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors

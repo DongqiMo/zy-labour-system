@@ -7,11 +7,18 @@ window.newView=function(){
  singleRecognitionMeta=editing?{...(orders.find(o=>o.id===editing)||{})}:null;
  const raw=$('#raw');if(!raw)return;
  const feedback=document.createElement('div');feedback.id='recognition-feedback';feedback.setAttribute('role','status');raw.parentElement.insertBefore(feedback,raw);
- if(editing){const button=document.createElement('button');button.type='button';button.textContent='按原单重新识别（预览）';button.onclick=reparseExistingOrder;raw.parentElement.querySelector('.note').before(button)}
+ if(editing){feedback.innerHTML=recognitionReviewMarkup(singleRecognitionMeta);const button=document.createElement('button');button.type='button';button.textContent='按原单重新识别（预览）';button.onclick=reparseExistingOrder;raw.parentElement.querySelector('.note').before(button)}
 };
-function recognitionFeedback(messages,multi=false){
+function recognitionReviewMarkup(order){
+ if(!order)return '';
+ const report=ZYOrderParser.reviewOrder(order.raw||'',order);
+ const rows=Object.entries(report.sources).filter(([key])=>Object.hasOwn(orderFields,key)).map(([key,lines])=>`<tr><th>${esc(orderFields[key].replace('*',''))}</th><td data-user-content>${lines.map(line=>esc(line)).join('<br>')}</td></tr>`).join('');
+ return `<details class="recognition-review"><summary>字段来源与待核对清单</summary><p>来源为识别时的原文片段；手动修改后请重新核对。</p>${report.warnings.length?`<ul>${report.warnings.map(text=>`<li>${esc(text)}</li>`).join('')}</ul>`:'<p>未发现额外核对项目，仍请确认识别结果。</p>'}${rows?`<table class="source-table"><tbody>${rows}</tbody></table>`:''}${report.unclassified.length?`<h3>未分类内容</h3><p data-user-content>${report.unclassified.map(line=>esc(line)).join('<br>')}</p>`:''}</details>`;
+}
+function recognitionFeedback(messages,multi=false,order=null){
  const container=$('#recognition-feedback');if(!container)return;
  container.innerHTML=messages.length?`<div class="note">${messages.map(message=>`<p>${esc(message)}</p>`).join('')}${multi?'<button type="button" onclick="moveSourceToBatch()">转到批量处理</button>':''}</div>`:'';
+ container.innerHTML+=recognitionReviewMarkup(order);
 }
 function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=order[key]||''}
 window.autoParse=async function(){
@@ -19,7 +26,7 @@ window.autoParse=async function(){
  const result=ZYOrderParser.analyze(input,code());
  if(!result.order){recognitionFeedback(result.warnings,true);return toast(result.warnings[0])}
  const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
- recognitionFeedback(result.warnings);toast('整理完成，请核对各项信息');
+ recognitionFeedback(result.warnings,false,order);toast('整理完成，请核对各项信息');
 };
 function moveSourceToBatch(){batchInput=$('#raw').value;batch=[];editing=null;mode='batch';newView();previewBatch()}
 async function reparseExistingOrder(){
@@ -28,7 +35,7 @@ async function reparseExistingOrder(){
  const old=orders.find(o=>o.id===editing),fresh=result.order;
  fresh.sourcePrefix=fresh.sourcePrefix||old?.sourcePrefix||$('#o-code').value.match(/ ([A-Z]+)$/)?.[1]||'';
  fresh.code=ZYOrderParser.companyCode($('#o-code').value,fresh.sourcePrefix);fresh.price=$('#o-price').value;
- singleRecognitionMeta=fresh;fillRecognisedFields(fresh);recognitionFeedback(['已生成重新识别预览，核对后保存才会修改公司单',...result.warnings]);
+ singleRecognitionMeta=fresh;fillRecognisedFields(fresh);recognitionFeedback(['已生成重新识别预览，核对后保存才会修改公司单',...result.warnings],false,fresh);
 }
 function recognitionMetadata(order,meta){
  if(!meta)return {};
