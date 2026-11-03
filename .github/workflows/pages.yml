@@ -1,6 +1,12 @@
 name: Publish free static website
-# Explicit manual publish; never enables a paid plan or changes repository visibility.
+# Publish website changes on main; never enables paid services or changes repository visibility.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/**'
+      - 'scripts/configure_static.py'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 permissions:
   contents: read

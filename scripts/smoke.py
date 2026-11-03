@@ -61,10 +61,26 @@ with tempfile.TemporaryDirectory() as tmp:
             staff.evaluate("document.querySelector('#modal').close()")
             admin.set_viewport_size({'width':390,'height':844})
             assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            admin.set_viewport_size({'width':1440,'height':1000})
+            admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
+            admin.locator('#raw').fill('【更新】XR80080香港某公司招聘：\n招聘岗位：铲车/叉车起重车驾驶员（货仓）：8名\n薪金待遇：HKD17118（底15500+1618津贴）\n工作时间：每天9小时\n基本要求：男女不限，30~48岁\nDJ: 90000\n80000')
+            admin.evaluate('autoParse()')
+            assert admin.locator('#o-title').input_value()=='铲车/叉车起重车驾驶员（货仓）'
+            assert admin.locator('#o-employer').input_value()=='香港某公司'
+            assert admin.locator('#o-salary').input_value()=='HKD17118（底15500+1618津贴）'
+            assert 'XR80080' not in admin.locator('#raw').input_value()
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            assert 'XR80080' not in admin.evaluate('orders[0].raw')
+            assert admin.evaluate('orders[0].title')=='铲车/叉车起重车驾驶员（货仓）'
+            admin.evaluate("editing=null;mode='batch';go('new')")
+            admin.locator('#batchraw').fill('AT-1234\n招聘岗位：厨师：2名\n月薪：HKD 18,000\nAT-5678\n招聘岗位：司机：3名\n月薪：HKD 17,000')
+            admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
+            assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
+            assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal and labelled single/batch job parsing; no browser errors')
     finally:
         server.shutdown();server.server_close()
