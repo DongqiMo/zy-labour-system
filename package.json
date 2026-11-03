@@ -9,7 +9,7 @@
     "start:static": "python3 -m http.server 8080 --directory dist",
     "test:postgres": "node tests/postgres.mjs",
     "test:transport": "node tests/supabase-adapter.mjs && node --experimental-strip-types tests/edge-test.ts",
-    "test:parser": "node tests/order-parser.mjs && node tests/recognition.mjs"
+    "test:parser": "node tests/order-parser.mjs && node tests/recognition.mjs && node tests/recognition-mechanism.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14"

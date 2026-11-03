@@ -1,0 +1,34 @@
+name: Recognition regression checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/**'
+      - 'tests/**'
+      - 'scripts/check.mjs'
+      - 'package.json'
+      - 'docs/recognition-rules.md'
+      - 'AGENTS.md'
+      - '.github/workflows/recognition.yml'
+  pull_request:
+    paths:
+      - 'dist/**'
+      - 'tests/**'
+      - 'scripts/check.mjs'
+      - 'package.json'
+      - 'docs/recognition-rules.md'
+      - 'AGENTS.md'
+      - '.github/workflows/recognition.yml'
+permissions:
+  contents: read
+jobs:
+  recognition:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # These checks use Node built-ins; no credentials or business data are required.
+      - run: npm run check
+      - run: npm run test:parser

@@ -23,6 +23,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check recognition regressions before publishing
+        run: |
+          npm run check
+          npm run test:parser
       - name: Generate public cloud configuration
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}

@@ -1,5 +1,17 @@
 # Website Update Log
 
+## 2026-11-03: Whole-document recognition mechanism (parser version 8)
+
+- Replaced the old fall-through classifier with a shared source-span catalog and field assembly pipeline. Each meaningful fragment records its exact excerpt, UTF-16 range, field assignment, disposition, and reason.
+- Generic compact role/pay recognition now works across roles and HK currency variants. Removed the food-processing-specific header branch, the unused pre-filter, reverse-substring provenance guesses, and overridden inline single/batch/save/copy handlers.
+- Prose summaries can supply age, education, gender, languages, and experience in any row order. Office-document work remains duties; quotation documents, insurance records, and expense reports are distinguished from upstream fees. Physical quantities, including watts, are preserved.
+- Review now shows excluded source text with reasons and conflicting/unclassified fragments. Manual corrections refresh warnings without replacing inputs or collapsing the open review panel.
+- New-engine records with unresolved fragments can be saved for review, but publication/copy requires explicit acknowledgement. Acknowledgement does not bypass required fields or fee checks; source changes invalidate it. Audit and confirmation metadata remain private and are excluded from publication text.
+- Added durable maintenance instructions (`AGENTS.md`), the current recognition contract, a synthetic error catalog covering 12 historical error families, and an executable mechanism suite including 64 role/currency/plus variants, complete span coverage, nearby counterexamples, and duplicate-handler protection.
+- Added recognition checks for relevant pushes/pull requests and a mandatory syntax/parser gate in the Pages deployment job.
+- Existing business records, source archives, manual values, permissions, calendar/search, and migration tools are retained. No bulk reparse, database deletion, or schema migration is performed. Old-order recognition remains preview/review/save.
+- Verification: syntax checks, all parser suites, temporary API/backup tests, and browser acceptance cover the pipeline, independent shared accounts, single/batch review confirmation and invalidation, audit persistence, original-text preservation, publication privacy, calendar filters, language switching, and mobile layout.
+
 ## 2026-11-03: Standardized company salary format (parser version 7)
 
 - Company monthly salaries use `HKD15920`, retaining a source trailing plus as `HKD15920+`. Missing HKD prefixes are added; Hong Kong currency aliases, spaces, thousands commas, and redundant monthly suffixes are normalized.

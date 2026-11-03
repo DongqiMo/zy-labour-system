@@ -106,8 +106,8 @@ with tempfile.TemporaryDirectory() as tmp:
             assert '底15500+1618津贴' in admin.locator('#o-salary').input_value();assert '2500' in notes
             assert admin.locator('#o-code').input_value().endswith(' XR')
             assert admin.locator('.recognition-review').count()==1
-            admin.locator('.recognition-review summary').click()
-            assert 'HKD17118' in admin.locator('.source-table').inner_text()
+            admin.locator('.recognition-review > summary').click()
+            assert 'HKD17118' in admin.locator('.source-table').first.inner_text()
             admin.locator('#o-price').fill('3.7w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             company=admin.evaluate('publish(orders[0])')
@@ -205,6 +205,46 @@ with tempfile.TemporaryDirectory() as tmp:
             assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
             assert saved['title']=='砧板师傅' and saved['salary']=='HKD19000；津贴：HKD500' and saved['raw']==source
             assert isinstance(saved['parsedSnapshot'],str) and isinstance(saved['manualFields'],str)
+            # Shared v8 mechanism: whole-source review, internal exclusions and explicit publication acknowledgement.
+            import json
+            mechanism_cases=json.loads((Path(__file__).resolve().parents[1]/'tests/fixtures/recognition-errors.json').read_text())['cases']
+            office=mechanism_cases[0]['source']
+            admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
+            admin.locator('#raw').fill(office);admin.evaluate('autoParse()')
+            assert admin.locator('#o-title').input_value()=='人力资源文员'
+            assert admin.locator('#o-salary').input_value()=='HKD17770+'
+            assert admin.locator('#o-gender').input_value()=='男女不限'
+            assert '出报价单' in admin.locator('#o-workContent').input_value()
+            admin.locator('.recognition-review > summary').click()
+            assert '住扣封顶20%' in admin.locator('.source-table').first.inner_text()
+            assert admin.locator('.recognition-review details').count()==1
+            admin.locator('#o-price').fill('4.2w');admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            released=admin.evaluate("publish(orders[0])")
+            assert 'HKD17770+' in released and '出报价单' in released
+            assert not any(value in released for value in ['2K','2.82','劳务费900','recognitionAudit'])
+            unknown=next(case['source'] for case in mechanism_cases if case['id']=='REC-005')
+            admin.evaluate("editing=null;mode='single';go('new')")
+            admin.locator('#raw').fill(unknown);admin.evaluate('autoParse()');admin.locator('#o-price').fill('4w')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            pending=admin.evaluate('orders[0].id')
+            assert admin.evaluate("ZYOrderParser.validateCompany(orders[0],true).includes('请先核对未分类或冲突内容并确认')")
+            admin.evaluate('editOrder(orders[0].id)')
+            admin.locator('#o-notes').fill('附加条件已核实')
+            admin.locator('.recognition-review > summary').click()
+            admin.locator('.review-confirm input').check()
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='8'
+            assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation']
+            assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',reviewed)==[]
+            # Batch uses the same classifier, and raw changes invalidate a prior confirmation.
+            admin.evaluate("editing=null;mode='batch';batch=[];go('new')")
+            admin.locator('#batchraw').fill(unknown);admin.evaluate('previewBatch()')
+            admin.locator('.recognition-review > summary').click();admin.locator('.review-confirm input').check()
+            assert admin.evaluate('!!batch[0].reviewConfirmation')
+            admin.locator('#batch-item-raw').fill('新增未知条件\n'+unknown)
+            assert admin.evaluate("batch[0].reviewConfirmation==='' ")
+            admin.evaluate("batch=[];editing=null;go('orders')")
             # Calendar date/code/status filters compose; navigation has two non-collapsible groups.
             checks=admin.evaluate("""()=>{const saved=orders;const f={...filters.orders};
               orders=[{...saved[0],id:'cal-a',code:'ZY-26-1101-01 QY',createdAt:'2026-11-01T12:00:00',title:'日历司机',status:'ready'},
