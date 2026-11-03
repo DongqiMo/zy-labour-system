@@ -20,7 +20,7 @@ function recognitionFeedback(messages,multi=false,order=null){
  container.innerHTML=messages.length?`<div class="note">${messages.map(message=>`<p>${esc(message)}</p>`).join('')}${multi?'<button type="button" onclick="moveSourceToBatch()">转到批量处理</button>':''}</div>`:'';
  container.innerHTML+=recognitionReviewMarkup(order);
 }
-function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=order[key]||''}
+function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||''}
 window.autoParse=async function(){
  const input=await simplify($('#raw').value.trim());if(!input)return toast('请先粘贴原单');
  const result=ZYOrderParser.analyze(input,code());
@@ -40,7 +40,7 @@ async function reparseExistingOrder(){
 function recognitionMetadata(order,meta){
  if(!meta)return {};
  let previous={};try{previous=JSON.parse(meta.parsedSnapshot||'{}')}catch{}
- const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String(previous[key]??''));
+ const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String((key==='salary'?ZYOrderParser.formatCompanySalary(previous[key]):previous[key])??''));
  return {sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual)};
 }
 window.saveOrder=async function(){
@@ -49,6 +49,7 @@ window.saveOrder=async function(){
  const oldRecord=editing?orders.find(o=>o.id===editing):null;
  const origin=data.code.match(/ ([A-Z]+)$/)?.[1]||singleRecognitionMeta?.sourcePrefix||ZYOrderParser.sourcePrefix(input);
  const candidate=ZYOrderParser.sanitizeCompany({...data,sourcePrefix:origin,raw:oldRecord?.raw??ZYOrderParser.sanitizeRaw(input)});
+ candidate.salary=ZYOrderParser.formatCompanySalary(candidate.salary);
  const problems=ZYOrderParser.validateCompany(candidate);if(problems.length){recognitionFeedback(problems,ZYOrderParser.splitOrders(input).length>1);return toast(problems[0])}
  if(orders.some(o=>o.id!==editing&&ZYOrderParser.baseCode(o.code)===ZYOrderParser.baseCode(candidate.code)))return toast('公司单号已存在，请修改');
  const metadata=recognitionMetadata(candidate,singleRecognitionMeta);

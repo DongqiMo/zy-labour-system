@@ -184,7 +184,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('saveOrder()');assert admin.evaluate('orders.length')==count
             admin.evaluate('moveSourceToBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['侍应生','粤菜厨师']
-            assert admin.evaluate('batch.map(o=>o.salary)')==['17500HKD','21000HKD']
+            assert admin.evaluate('batch.map(o=>o.salary)')==['HKD17500','HKD21000']
             # Existing company orders are re-recognised only after preview and explicit Save.
             source='需过港面试，附刀工视频\n岗位【SUPPLIER-20991234砧板师傅】\n（批文厨房帮工）\n工作要求：\n1.男性，30-40岁，有经验\n2.粤语流利\n3.工作时间：10.5小时，上6休1\n4.薪资待遇：$19000，包吃2餐，住宿扣2500\n津贴：HKD500\n31000'
             admin.evaluate("""async(raw)=>{const record={id:'recognition-preview',code:'ZY-26-1103-81',title:'（批文厨房帮工）',gender:'男',salary:'$19000，包吃2餐，住宿扣2500',price:'4.8w',status:'ready',createdAt:new Date().toISOString(),raw};const result=await api('/api/orders',{method:'PUT',body:{orders:[record,...orders],revision}});revision=result.revision;orders=[record,...orders]}""",source)
@@ -194,7 +194,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('#o-code').input_value()=='ZY-26-1103-81 SUPPLIER'
             assert admin.locator('#o-gender').input_value()=='男'
             assert admin.locator('#o-rest').input_value()=='上6休1'
-            assert admin.locator('#o-salary').input_value()=='$19000；津贴：HKD500'
+            assert admin.locator('#o-salary').input_value()=='HKD19000；津贴：HKD500'
             assert admin.locator('#o-price').input_value()=='4.8w'
             assert 'HKD500' in admin.locator('#o-salary').input_value()
             assert '2500' in admin.locator('#o-notes').input_value()
@@ -203,7 +203,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             saved=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
             assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
-            assert saved['title']=='砧板师傅' and saved['salary']=='$19000；津贴：HKD500' and saved['raw']==source
+            assert saved['title']=='砧板师傅' and saved['salary']=='HKD19000；津贴：HKD500' and saved['raw']==source
             assert isinstance(saved['parsedSnapshot'],str) and isinstance(saved['manualFields'],str)
             # Calendar date/code/status filters compose; navigation has two non-collapsible groups.
             checks=admin.evaluate("""()=>{const saved=orders;const f={...filters.orders};

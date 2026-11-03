@@ -13,7 +13,7 @@ window.previewBatch=async function(){
  if(!raw)return toast('请先粘贴原单');
  const parts=ZYOrderParser.splitOrders(raw);
  const next=[];
- for(const part of parts){const order=parse(part);order.code=ZYOrderParser.companyCode(code(next),order.sourcePrefix);order.price=suggestion(order.salary);const snapshot=JSON.parse(order.parsedSnapshot||'{}');snapshot.code=order.code;order.parsedSnapshot=JSON.stringify(snapshot);next.push(order)}
+ for(const part of parts){const order=parse(part);order.salary=ZYOrderParser.formatCompanySalary(order.salary);order.code=ZYOrderParser.companyCode(code(next),order.sourcePrefix);order.price=suggestion(order.salary);const snapshot=JSON.parse(order.parsedSnapshot||'{}');snapshot.code=order.code;snapshot.salary=order.salary;order.parsedSnapshot=JSON.stringify(snapshot);next.push(order)}
  batch=next;activeBatch=0;renderBatch();
 };
 window.renderBatch=function(){
@@ -38,7 +38,7 @@ function selectBatchItem(index){if(index<0||index>=batch.length)return;activeBat
 function removeBatchItem(){batch.splice(activeBatch,1);renderBatch()}
 async function reparseBatchItem(){
  const previous=batch[activeBatch],raw=await simplify($('#batch-item-raw').value.trim());if(!raw)return toast('请先粘贴原单');
- const result=ZYOrderParser.analyze(raw,previous.code);if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=ZYOrderParser.companyCode(previous.code,parsed.sourcePrefix);parsed.price=suggestion(parsed.salary);batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
+ const result=ZYOrderParser.analyze(raw,previous.code);if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.salary=ZYOrderParser.formatCompanySalary(parsed.salary);parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=ZYOrderParser.companyCode(previous.code,parsed.sourcePrefix);parsed.price=suggestion(parsed.salary);batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
 }
 window.saveBatch=async function(){
  if(!batch.length)return toast('没有可保存的原单');
@@ -49,7 +49,7 @@ window.saveBatch=async function(){
   const candidate=ZYOrderParser.sanitizeCompany(o),issues=ZYOrderParser.validateCompany(candidate);if(issues.length)return fail(issues[0]);
   if(used.has(ZYOrderParser.baseCode(candidate.code)))return fail('公司单号已存在，请修改');used.add(ZYOrderParser.baseCode(candidate.code));
  }
- const added=batch.map(o=>ZYOrderParser.sanitizeCompany({...Object.fromEntries(Object.keys(orderFields).map(k=>[k,String(o[k]??'').trim()])),raw:ZYOrderParser.sanitizeRaw(o.raw),sourcePrefix:o.sourcePrefix||'',...recognitionMetadata(o,o),id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(o.price)}));
+ const added=batch.map(o=>ZYOrderParser.sanitizeCompany({...Object.fromEntries(Object.keys(orderFields).map(k=>[k,String(o[k]??'').trim()])),raw:ZYOrderParser.sanitizeRaw(o.raw),sourcePrefix:o.sourcePrefix||'',...recognitionMetadata(o,o),id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(o.price)})).map(record=>({...record,salary:ZYOrderParser.formatCompanySalary(record.salary)}));
  const old=orders;orders=added.concat(orders);if(!await persist()){orders=old;return}
  batch=[];batchInput='';activeBatch=0;go('orders');toast('批量劳务单已保存');
 };

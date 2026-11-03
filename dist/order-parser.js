@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='6';
+ const VERSION='7';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?=\D)/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -155,6 +155,14 @@
   const notes=clauses([before,rest].filter(Boolean).join('；')).map(part=>cleanCompanyText(part,true,true)).filter(Boolean);
   const earnings=notes.filter(part=>compensationPattern.test(part)&&!deductionPattern.test(part));
   return {salary:unique([main,...earnings]).join('；'),main,notes:notes.filter(part=>!earnings.includes(part))};
+ }
+ function formatCompanySalary(value){
+  const pay=extractPay(value);if(!pay.main)return String(value||'');
+  // Formatting only: explicitly foreign currencies are never silently converted.
+  if(/USD|RMB|CNY|MOP|CAD|EUR|GBP|人民币|人民幣|澳门币|澳門幣/i.test(pay.main))return pay.salary;
+  const number=pay.main.match(/\d[\d,]*(?:\.\d+)?(?:\s*[-~～至]\s*\d[\d,]*(?:\.\d+)?)?/);if(!number)return pay.salary;
+  const nonMonthly=pay.main.match(/[/／](?:年|日|天|小时|小時|时|時)/)?.[0]||'';
+  return 'HKD'+number[0].replace(/[,\s]/g,'')+nonMonthly+(pay.main.endsWith('+')?'+':'')+pay.salary.slice(pay.main.length);
  }
  function cleanField(key,value){
   if(typeof value!=='string')return value;
@@ -329,7 +337,7 @@
   const view={...order};if(typeof view.raw==='string')view.raw=sanitizeRaw(view.raw);
   view.gender=normalizeGender(view.gender,view.raw);view.salary=cleanField('salary',view.salary);
   view.employer=editorial(view.employer||'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'');
-  return sanitizeCompany(view);
+  const result=sanitizeCompany(view);result.salary=formatCompanySalary(result.salary);return result;
  }
- root.ZYOrderParser={reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
+ root.ZYOrderParser={formatCompanySalary,reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
 })(globalThis);

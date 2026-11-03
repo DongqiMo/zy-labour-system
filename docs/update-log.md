@@ -1,5 +1,13 @@
 # Website Update Log
 
+## 2026-11-03: Standardized company salary format (parser version 7)
+
+- Company monthly salaries use `HKD15920`, retaining a source trailing plus as `HKD15920+`. Missing HKD prefixes are added; Hong Kong currency aliases, spaces, thousands commas, and redundant monthly suffixes are normalized.
+- Allowances and bonuses remain in the salary field; explicit employee deductions remain in notes. Upstream supplier quotations and agency/permit/insurance fees remain excluded.
+- Formatting applies to company cards, publication/copy text, single/batch recognition forms, and saved edits. Existing records display the format without a bulk database rewrite; archived source text is unchanged.
+- Formatting does not perform exchange-rate conversion or turn hourly/daily pay into monthly pay. Explicit foreign currencies and non-monthly units are preserved.
+- Validation: parser cases for optional plus signs, source immutability, repeated formatting, components, and currency/period safety passed. Full browser acceptance checks passed, including the calendar, compound filters, grouped navigation, source review, mobile layout, and existing sharing workflows.
+
 ## 2026-11-03: Payroll classification, recognition review, navigation, and order calendar
 
 - Salary now includes the main wage and explicitly stated allowances, bonuses, commissions, and base-pay breakdowns. Amounts and eligibility conditions are retained.

@@ -110,3 +110,10 @@ const unsafeDeduction=P.sanitizeCompany({salary:'HKD18000',notes:'住宿扣2500�
 assert.doesNotMatch(unsafeDeduction.notes,/3000|1000|35000|劳务|办证|全包/);assert.match(unsafeDeduction.notes,/2500/);
 const classifiedDeduction=P.parse('岗位：司机\n性别：男\n工资：18000/月\n工作要求：有经验，住宿扣2500','ZY-26-1103-33');assert.match(classifiedDeduction.notes,/2500/);assert.doesNotMatch(classifiedDeduction.requirements,/2500/);
 console.log('PASS: salary components, employee deductions, supplier fee privacy, idempotence and source/review reports');
+
+for(const [value,expected]of [['15920','HKD15920'],['15920+','HKD15920+'],['HK$15,920+','HKD15920+'],['HKD 15,920','HKD15920'],['15920HKD','HKD15920'],['港幣15,920/月','HKD15920'],['$15920，津贴500','HKD15920；津贴500'],['HKD15920+；奖金2000元','HKD15920+；奖金2000元'],['HKD100/小时','HKD100/小时'],['USD15920','USD15920']]){
+ assert.equal(P.formatCompanySalary(value),expected,value);assert.equal(P.formatCompanySalary(expected),expected);
+}
+const formattedRecord={code:'ZY-26-1103-34',title:'司机',gender:'男',salary:'HK$15,920+',raw:'工资HK$15,920+'};const originalRecord=JSON.stringify(formattedRecord);
+assert.equal(P.present(formattedRecord).salary,'HKD15920+');assert.equal(JSON.stringify(formattedRecord),originalRecord);
+console.log('PASS: company salary HKD formatting, optional plus, pay components, period/currency safety and immutable source');
