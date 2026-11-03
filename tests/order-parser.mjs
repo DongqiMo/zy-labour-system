@@ -52,7 +52,7 @@ const kitchen=`选表香港面试
 【食宿安排】包工作餐，雇主提供宿舍扣租金大约2500/月
 【工作内容】需有厨房及切配经验`;
 const cook=parse(kitchen,'ZY-26-1103-01');
-assert.equal(cook.title,'西餐帮厨');assert.equal(cook.gender,'男');assert.equal(cook.salary,'16310/月');assert.equal(cook.age,'35 岁以下');assert.match(cook.notes,/2500\/月/);assert.equal(cook.workContent,'需有厨房及切配经验');
+assert.equal(cook.title,'西餐帮厨');assert.equal(cook.gender,'男');assert.equal(cook.salary,'16310/月');assert.equal(cook.age,'35 岁以下');assert(!cook.notes.includes('2500'));assert.match(cook.notes,/雇主提供宿舍/);assert.equal(cook.workContent,'需有厨房及切配经验');
 assert.equal(parse('【性別要求】男\n【工資薪酬】港幣16,310/月').gender,'男');assert.equal(parse('【性別要求】男\n【工資薪酬】港幣16,310/月').salary,'港幣16,310/月');
 assert.equal(parse('【备注】提供宿舍\n【合约期限】24个月\n【岗位】帮厨').notes,'提供宿舍');
 assert.equal(ZYOrderParser.cleanField('gender','要求】 男'),'男');assert.equal(ZYOrderParser.cleanField('salary','薪酬】 16310/月'),'16310/月');
@@ -84,3 +84,30 @@ assert.equal(parse('【岗位】厨师\n【性别要求】男（35岁以下）')
 assert.equal(parse('【岗位】服务员\n【性别要求】女士，懂粤语').gender,'女');
 assert.equal(parse('【岗位】清洁员\n【基本要求】男女不限，年龄不限').gender,'男女不限');
 console.log('PASS: gender enum, bracket/punctuation/qualifier removal, explicit-label precedence, exclusions, uncertain values remain unassigned');
+const monetary=ZYOrderParser.parse(sample,'ZY-26-1103-01');
+assert.equal(monetary.salary,'HKD17118（底15500+1618津贴）');assert(monetary.raw.includes('23800全包'));assert(monetary.raw.includes('HKD500'));
+assert(!monetary.notes.includes('23800'));assert(!monetary.notes.includes('全包'));assert(!monetary.notes.includes('HKD500'));assert(monetary.notes.includes('雇主提供宿舍'));
+const safe=ZYOrderParser.sanitizeCompany({raw:sample,code:'ZY-26-1103-01',salary:'HKD 18,000（底薪16,000，津贴2,000）',price:'3.7w',notes:'原单全包价23800；雇主提供宿舍扣租金大约2500/月；劳务费3000元；铲车津贴（HKD500）需考证',requirements:'年龄30~48岁，每天9小时，认识24个英文字母；另收管理费2000',workContent:'操作设备500W功率，搬运20kg货物'});
+assert.equal(safe.raw,sample);assert.equal(safe.price,'3.7w');assert.equal(safe.salary,'HKD 18,000（底薪16,000，津贴2,000）');assert.equal(safe.code,'ZY-26-1103-01');
+for(const value of [safe.notes,safe.requirements])assert(!/23800|2500|3000|500|2000|全包/.test(value));
+assert(safe.notes.includes('雇主提供宿舍'));assert(safe.requirements.includes('30~48岁'));assert(safe.requirements.includes('9小时'));assert(safe.requirements.includes('24个英文字母'));assert(safe.workContent.includes('500W功率'));assert(safe.workContent.includes('20kg'));
+assert.deepEqual(ZYOrderParser.sanitizeCompany(safe),safe);
+assert.equal(ZYOrderParser.stripSourcePackage('HKD17118，全包价23800'),'HKD17118');
+assert.equal(ZYOrderParser.stripSourcePackage('HKD17118 全包价23800'),'HKD17118');
+assert.equal(ZYOrderParser.stripSourcePackage('23800全包'),'');
+assert.equal(ZYOrderParser.stripSourcePackage('全包价：2.38w'),'');
+assert.equal(parse('【职位】厨师\n【备注】HKD500津贴\n费用：23800全包').salary,'');
+assert.equal(parse('【职位】厨师\n全包HKD23800').salary,'');
+assert.equal(parse('【职位】厨师\n【薪酬】16310/月').salary,'16310/月');
+assert.equal(parse('【职位】厨师\n【薪金待遇】HKD17118（底15500+1618津贴）').salary,'HKD17118（底15500+1618津贴）');
+console.log('PASS: source package/fee amounts excluded throughout company fields, exact salary preserved/auto-filled, independent ZY price retained, original raw and non-price numbers preserved');
+for(const quote of ['全包價格23800','全包价格：23800元（含所有费用）','费用：23800全包','23800全包（含中介费）','全包2万3','原单全包价格两万三千八','全包价格\n23800','底价23800','上家价：23800','23800左右']){
+ const output=ZYOrderParser.cleanCompanyText('需有经验；'+quote+'；提供工作餐');
+ assert(!/23800|全包|两万|2万/.test(output),quote+' => '+output);assert(output.includes('需有经验'));assert(output.includes('提供工作餐'));
+}
+assert.equal(ZYOrderParser.stripSourcePackage('HKD17118，全包2万3'),'HKD17118');
+assert.equal(ZYOrderParser.stripSourcePackage('HKD17118 23800全包'),'HKD17118');
+assert.equal(ZYOrderParser.stripSourcePackage('HKD17118 全包两万三千八'),'HKD17118');
+console.log('PASS: entire upstream package clauses and price tails removed, including traditional labels and mixed Arabic/Chinese quotes');
+const plainNumbers=ZYOrderParser.sanitizeCompany({age:'35',hours:'9',rest:'4',salary:'16310/月',price:'3.7w',notes:'23800'});
+assert.equal(plainNumbers.age,'35');assert.equal(plainNumbers.hours,'9');assert.equal(plainNumbers.rest,'4');assert.equal(plainNumbers.notes,'');assert.equal(plainNumbers.salary,'16310/月');assert.equal(plainNumbers.price,'3.7w');

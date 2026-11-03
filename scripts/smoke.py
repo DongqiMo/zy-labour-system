@@ -68,13 +68,21 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
             admin.set_viewport_size({'width':1440,'height':1000})
             admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
-            admin.locator('#raw').fill('【更新】XR80080香港某公司招聘：\n招聘岗位：铲车/叉车起重车驾驶员（货仓）：8名\n薪金待遇：HKD17118（底15500+1618津贴）\n工作时间：每天9小时\n基本要求：男女不限，30~48岁\nDJ: 90000\n80000')
+            admin.locator('#raw').fill('【更新】XR80080香港某公司招聘：\n招聘岗位：铲车/叉车起重车驾驶员（货仓）：8名\n薪金待遇：HKD17118（底15500+1618津贴）\n工作时间：每天9小时\n基本要求：男女不限，30~48岁\n备注：铲车津贴（HKD500）需考证；雇主提供宿舍扣租金2500/月\n费用：23800全包\nDJ: 90000\n80000')
             admin.evaluate('autoParse()')
             assert admin.locator('#o-title').input_value()=='铲车/叉车起重车驾驶员（货仓）'
             assert admin.locator('#o-employer').input_value()=='香港某公司'
             assert admin.locator('#o-salary').input_value()=='HKD17118（底15500+1618津贴）'
             assert 'XR80080' not in admin.locator('#raw').input_value()
+            notes=admin.locator('#o-notes').input_value()
+            assert not any(token in notes for token in ['23800','全包','HKD500','2500'])
+            admin.locator('#o-price').fill('3.7w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            company=admin.evaluate('publish(orders[0])')
+            assert 'HKD17118（底15500+1618津贴）' in company
+            assert '卓亚全包价：3.7w' in company
+            assert not any(token in company for token in ['23800','HKD500','2500'])
+            assert admin.evaluate("orders[0].raw.includes('23800全包')")
             assert 'XR80080' not in admin.evaluate('orders[0].raw')
             assert admin.evaluate('orders[0].title')=='铲车/叉车起重车驾驶员（货仓）'
             admin.evaluate("editing=null;mode='batch';go('new')")
@@ -100,6 +108,6 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill; no browser errors')
     finally:
         server.shutdown();server.server_close()
