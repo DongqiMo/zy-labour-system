@@ -88,3 +88,13 @@ for(const tail of ['22000+3500+1100','3.2w','💰2K+2.64办证保险另计']){
  assert.equal(o.salary,'16888');assert.equal(o.workContent,'整理商品');assert.doesNotMatch(o.requirements,/22000|3500|1100|3\.2|2K|工作内容/);
 }
 console.log('PASS: decorative bullets, compact HK headers, supplier expressions, inline/wrapped labels, legitimate temperatures and salaries');
+
+for(const label of ['职位薪酬','職位薪酬','职位薪资','職位薪資','岗位薪酬','崗位薪酬']){
+ for(const amount of ['HK$28000+','HK$28,000/月','HKD28000+','HK28000+']){
+  const o=P.parse(`[职位名称]货车司机\n[${label}]${amount}\n[性别要求]男\n[工作内容]负责运输\n劳务费700/月，办证1200，保险600`,'ZY-26-1103-28');
+  assert.equal(o.salary,amount);assert.doesNotMatch(o.notes,/HK|700|1200|600/);
+ }
+}
+assert.equal(P.extractPay('包吃两餐，HK$28000+').salary,'HK$28000+');
+assert.equal(P.cleanCompanyText('HK$28000'),'');
+console.log('PASS: simplified/traditional position pay labels and complete HK$ currency preserve original salary without leaking fees');
