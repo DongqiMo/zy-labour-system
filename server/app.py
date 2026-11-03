@@ -229,11 +229,11 @@ class Handler(BaseHTTPRequestHandler):
             elif method == 'GET':
                 if path=='/config.js':
                     return self.reply(200,b"window.ZY_CONFIG={provider:'sqlite'};",content_type='text/javascript; charset=utf-8')
-                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
+                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
                 if path not in files:
                     raise APIError(404, '找不到页面')
                 target = ROOT / 'dist' / files[path]
-                mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml'}
+                mime = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png'}
                 self.reply(200, target.read_bytes(), content_type=mime[target.suffix])
             else:
                 raise APIError(405, '方法不被允许')

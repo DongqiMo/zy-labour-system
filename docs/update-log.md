@@ -1,5 +1,12 @@
 # Website Update Log
 
+## 2026-11-03: Company logo
+
+- Replaced the sidebar brand mark and header Z placeholder with the supplied company logo.
+- Added the same logo to the login page and browser/application icon.
+- Preserved the original transparent PNG without redrawing or changing its colors.
+- Refreshed icon and script asset versions; recognition rules and business records are unchanged.
+
 ## 2026-11-03: Repository documentation in English
 
 - Converted the README, deployment guide, database migration guide, historical migration specification, and update log to English.
