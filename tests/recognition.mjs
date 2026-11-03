@@ -1,0 +1,77 @@
+// Synthetic regression documents exercise formats, not production customer records.
+import assert from 'node:assert/strict';
+import '../dist/order-parser.js';
+const P=ZYOrderParser;
+const cutting=`能出席过港面试报名选表，需附斩鸡去骨砧板刀工视频
+岗位【QY-20991234砧板师傅】（发简历时附砧板刀工的视频）
+（批文厨房帮工）
+工作职责：
+协助厨房日常运作，准备食材，斩鸡去骨、切肉类菜类，保持厨房清洁
+工作要求：
+1.男性，30-40岁，有厨房及砧板切配工作经验
+2.粤语流利，有责任心，服从管理
+3.工作时间：10.5小时（11:00-22:00排班）（含吃饭休息时间），上6休1，满三个月做得好
+有奖金跟劳工假
+4.薪资待遇：$19000，包吃2餐，住宿扣实际住宿费2500
+5.地址：港九新界（需调店）
+31000`;
+const cut=P.parse(cutting,'ZY-26-1103-13');
+assert.equal(cut.title,'砧板师傅');assert.equal(cut.gender,'男');assert.equal(cut.age,'30-40岁');assert.equal(cut.salary,'$19000');assert.equal(cut.code,'ZY-26-1103-13 QY');assert.equal(cut.sourcePrefix,'QY');assert.equal(cut.rest,'上6休1');
+assert.match(cut.hours,/10\.5小时/);assert.match(cut.hours,/11:00-22:00/);assert(!cut.hours.includes('上6休1'));assert(!cut.hours.includes('奖金'));
+assert.match(cut.notes,/批文厨房帮工/);assert.match(cut.notes,/包吃2餐/);assert.match(cut.notes,/住宿/);assert.match(cut.notes,/奖金/);assert.match(cut.notes,/劳工假/);assert(cut.notes.indexOf('满三个月')<cut.notes.indexOf('有奖金'));
+assert.match(cut.interview,/过港面试/);assert.match(cut.interview,/视频/);assert.match(cut.workContent,/准备食材/);assert(!cut.requirements.includes('工作时间'));assert(!cut.requirements.includes('19000'));
+assert(!cut.raw.includes('QY-20991234'));assert(cut.raw.includes('31000'));assert.deepEqual(P.validateCompany(cut,true),[]);
+for(const field of ['title','salary','notes','requirements','workContent','interview'])assert(!/[【】\[\]［］]/.test(cut[field]));
+assert(!JSON.stringify({...cut,raw:'',parsedSnapshot:''}).includes('2500'));
+// Field order changes, paragraph bodies remain associated with their labels.
+const blocks=['岗位【AB-20992345电工】','工作要求：\n1.女性，25-45岁\n2.普通话流利，有5年经验','薪资待遇：HKD 20,000（底薪18,000+津贴2,000），包工作餐，住宿扣2500','工作时间：\n10.5小时，每周6天，上6休1','工作职责：\n维修电路\n检查设备','面试方式：视频面试，需附证书'];
+for(let shift=0;shift<blocks.length;shift++)for(const reverse of [false,true]){
+ const arrangement=blocks.slice(shift).concat(blocks.slice(0,shift));if(reverse)arrangement.reverse();
+ const order=P.parse(arrangement.join('\n'),'ZY-26-1103-15');
+ assert.equal(order.title,'电工');assert.equal(order.gender,'女');assert.equal(order.salary,'HKD 20,000');assert.equal(order.rest,'上6休1');assert.match(order.hours,/10\.5小时/);assert.match(order.notes,/津贴2,000/);assert.match(order.workContent,/维修电路/);assert.match(order.interview,/视频面试/);assert.equal(order.code,'ZY-26-1103-15 AB');
+ assert.deepEqual(P.validateCompany(order,true),[]);
+}
+const two=`侍应生 男女不限 35岁以下 粤语
+工资待遇：17500HKD 有工作餐 住宿扣2500
+工作时间：每周6天*10小时班
+总价30500元含劳务办证，保险另计
+
+粤菜厨师 男 45岁以下 粤语
+工资待遇：21000HKD 有工作餐 住宿扣2500
+工作时间：每周6天*10小时班
+要求：会海鲜类的中餐，有管理经验优先
+总价30500元含劳务办证，保险另计`;
+const separated=P.splitOrders(two);assert.equal(separated.length,2);const pair=separated.map(raw=>P.parse(raw,'ZY-26-1103-20'));
+assert.deepEqual(pair.map(o=>o.title),['侍应生','粤菜厨师']);assert.deepEqual(pair.map(o=>o.gender),['男女不限','男']);assert.deepEqual(pair.map(o=>o.salary),['17500HKD','21000HKD']);assert.deepEqual(pair.map(o=>o.age),['35岁以下','45岁以下']);
+assert(!pair[0].requirements.includes('海鲜'));assert(pair[1].requirements.includes('海鲜'));
+assert(P.parse(two).needsSplit);assert(P.analyze(two).order===null);
+assert.equal(P.splitOrders(two.replace(/\n\n/,'\n---\n')).length,2);
+assert.equal(P.splitOrders('AT-1234\n岗位：厨师\n工资：HKD18000\nAT-5678\n岗位：司机\n工资：HKD19000').length,2);
+assert.equal(P.splitOrders('岗位：厨师\n薪资：18000/月\n工作内容：\n厨房工作\n\n厨师有经验优先').length,1);
+const ambiguous=P.analyze('岗位：厨师\n性别：男\n性别：女\n薪资：18000/月\n月薪：19000/月','ZY-26-1103-01');assert.equal(ambiguous.order.gender,'');assert.equal(ambiguous.order.salary,'');assert(ambiguous.warnings.length>=2);
+for(const [value,prefix]of [['QY-20991234','QY'],['XR80080','XR'],['ABC-20991234','ABC'],['AT-12345','AT']]){
+ const source=`岗位【${value}维修技工】\n性别：男\n月薪：HKD19000`;
+ assert.equal(P.sourcePrefix(source),prefix);assert(!P.sanitizeRaw(source).includes(value));assert.equal(P.parse(source,'ZY-26-1103-21').code,'ZY-26-1103-21 '+prefix);
+}
+assert.equal(P.sourcePrefix('月薪HKD19000\n需ISO9001知识\n驾驶B737设备'),'');assert(P.sanitizeRaw('月薪HKD19000\n需ISO9001知识').includes('HKD19000'));
+const manual=P.sanitizeCompany({code:'ZY-26-1103-23 QY',title:'【电工】',sourcePrefix:'QY',gender:'男',salary:'$20000，津贴$500，住宿扣2500',price:'4.2w',notes:'【奖金】2000元；全包价格23800；保险另计',raw:'保留原单23800'});
+assert.equal(manual.title,'电工');assert.equal(manual.salary,'$20000');assert.match(manual.notes,/津贴\$500/);assert.match(manual.notes,/奖金2000元/);assert(!/23800|2500|保险/.test(manual.notes));assert.equal(manual.price,'4.2w');assert.equal(manual.raw,'保留原单23800');assert.deepEqual(P.sanitizeCompany(manual),manual);
+console.log('PASS: whole-document classification, 12 reordered formats, compact job/source IDs, paragraph gender, pay-component notes, cycles, interview preparation, multi-order guard and price confidentiality');
+for(const title of ['男装店销售','女性健康顾问','男性服装销售']){
+ const order=P.parse(`岗位：${title}\n工资：HKD19000`,'ZY-26-1103-24');
+ assert.equal(order.title,title);assert.equal(order.gender,'');
+}
+assert.equal(P.parse('岗位：服务员男女不限35岁以下粤语\n工资：17500HKD').title,'服务员');
+assert(!P.cleanCompanyText('含23800劳务费').includes('23800'));
+for(const text of ['包吃2餐，HKD19000，住宿扣2500','有工作餐 17500HKD，住宿扣2500']){
+ const pay=P.extractPay(text);assert(/19000|17500/.test(pay.salary));assert(!pay.salary.includes('2500'));assert(!pay.notes.join('').includes('2500'));assert(pay.notes.join('').match(/工作餐|包吃2餐/));
+}
+for(const [left,right]of [['【','】'],['[',']'],['［','］'],['「','」'],['『','』'],['〔','〕']]){
+ const order=P.parse(`${left}岗位名称${right}电工\n${left}工资标准${right}HKD19000\n${left}性别要求${right}男`,'ZY-26-1103-25');
+ assert.equal(order.title,'电工');assert.equal(order.salary,'HKD19000');assert.equal(order.gender,'男');
+}
+const benefitInRequirements=P.parse('岗位：司机\n工作要求：男，35岁以下，年终奖金2000元\n工资：HKD19000','ZY-26-1103-26');
+assert(!benefitInRequirements.requirements.includes('2000'));assert(benefitInRequirements.notes.includes('2000元'));
+const distantSalary='岗位：厨师\n工资：HKD18000\n\n司机 男 40岁以下\n工作要求：\n'+Array.from({length:25},(_,i)=>`${i+1}.相关工作经验`).join('\n')+'\n工资：HKD19000';
+assert.equal(P.splitOrders(distantSalary).length,2);
+assert.equal(P.splitOrders('岗位：厨师\n工资：HKD18000\n岗位：电工\n工作要求：有经验').length,2);

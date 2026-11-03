@@ -25,6 +25,20 @@
  ['两次输入的新密码不一致','The new passwords do not match'],['密码已修改，请使用新密码登录','Password changed. Sign in with your new password.'],['账号已开通，请通过安全方式告知同事初始密码','Account created. Share the initial password securely.'],['停用此账号并立即撤销其登录？','Disable this account and block its business access?'],['暂停所有业务资料写入，以便备份迁移？','Pause all business writes for backup or migration?'],['恢复业务写入？','Resume business writes?'],['维护状态已更新','Maintenance setting updated'],['完整备份已生成，请保存到私人位置','Complete backup generated. Keep it in a private location.'],['请等当前保存完成再导入','Wait for the current save before importing'],['文件超过32MB，请使用迁移工具分配更合适的传输方式','File exceeds 32 MB. Use a suitable database migration tool.'],['备份格式或版本不支持','Unsupported backup format or version'],['备份无法读取，未恢复','Cannot read backup; nothing restored'],
  ['已退出登录','Signed out'],['登录已过期，请重新登录','Session expired. Sign in again.'],['登录已过期，请重新登录。','Session expired. Sign in again.'],['账号或密码错误','Incorrect account or password'],['账号未获团队授权、已停用或权限不足','Account is not authorised, is disabled or has insufficient permissions'],['其他人已修改订单，请先刷新列表并重新核对，当前修改尚未保存','Someone changed the orders. Reload and review before saving. Your changes are not saved.'],['其他人已修改此资料，请重新打开核对，当前修改尚未保存','Someone changed this record. Reopen and review it before saving.'],['系统正在维护或迁移，已暂停写入；当前输入尚未保存','Writes are paused for maintenance or migration. Your input has not been saved.'],['云端尚未配置','Cloud connection is not configured'],['服务器响应异常，请稍后重试','Unexpected server response; try again later'],['请求失败','Request failed'],['操作失败，请稍后重试','Operation failed; try again later'],
  ['简体转换库未加载，原文暂按输入保存，请核对繁体字段','Text conversion is unavailable. The entered source is retained; check traditional Chinese fields.'],['本浏览器没有可导入的旧资料（示例订单不导入）','No legacy records to import; example orders are excluded'],['旧订单格式异常，未上传','Invalid legacy order format; nothing uploaded'],['旧劳工资料无法读取，未上传','Cannot read legacy worker records; nothing uploaded']
+,
+ ["检测到多份原单，请使用批量录入或拆分后处理", "Multiple source orders detected. Use batch entry or split the source first."],
+ ["识别到多组薪资，请人工核对或拆分原单", "Multiple salary values detected. Review manually or split the source."],
+ ["未可靠识别职位，请人工核对", "Job title is uncertain. Review it manually."],
+ ["性别不明确或有冲突，请人工选择", "Recruitment gender is missing or conflicting. Select it manually."],
+ ["未可靠识别主薪资，请人工核对", "Main salary is uncertain. Review it manually."],
+ ["按原单重新识别（预览）", "Recognise Source Again (Preview)"],
+ ["已生成重新识别预览，核对后保存才会修改公司单", "Recognition preview is ready. Review and save to update this company order."],
+ ["转到批量处理", "Switch to Batch Entry"],
+ ["公司单号格式应为 ZY-年份-月日-流水，可附上家字母", "Use ZY-YY-MMDD-NN, optionally followed by the supplier’s full letter prefix."],
+ ["公司单不能含原单字段括号", "Company orders cannot contain source label brackets."],
+ ["公司单不能含完整上家编号，只保留单号后的上家字母", "Keep only the supplier’s full letter suffix, not its full source reference."],
+ ["公司单仍有原单报价或费用信息，请核对", "Upstream pricing or fees remain. Review the company order."],
+ ["这份原单需要重新核对，暂不能生成发布稿", "Review this source order before generating a release."]
  ];
  const dictionary=new Map(pairs),originals=new WeakMap(),lastValues=new WeakMap(),attributeOriginals=new WeakMap();
  let language='zh';try{language=localStorage.getItem('zy-ui-language-v1')==='en'?'en':'zh'}catch{}

@@ -98,16 +98,20 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('autoParse()')
             assert admin.locator('#o-title').input_value()=='铲车/叉车起重车驾驶员（货仓）'
             assert admin.locator('#o-employer').input_value()=='香港某公司'
-            assert admin.locator('#o-salary').input_value()=='HKD17118（底15500+1618津贴）'
+            assert admin.locator('#o-salary').input_value()=='HKD17118'
             assert 'XR80080' not in admin.locator('#raw').input_value()
             notes=admin.locator('#o-notes').input_value()
-            assert not any(token in notes for token in ['23800','全包','HKD500','2500'])
+            assert not any(token in notes for token in ['23800','全包','2500'])
+            assert 'HKD500' in notes
+            assert '底15500+1618津贴' in notes
+            assert admin.locator('#o-code').input_value().endswith(' XR')
             admin.locator('#o-price').fill('3.7w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             company=admin.evaluate('publish(orders[0])')
-            assert 'HKD17118（底15500+1618津贴）' in company
+            assert '工资待遇：HKD17118' in company
+            assert '底15500+1618津贴' in company
             assert '卓亚全包价：3.7w' in company
-            assert not any(token in company for token in ['23800','HKD500','2500'])
+            assert not any(token in company for token in ['23800','2500'])
             assert admin.evaluate("orders[0].raw.includes('23800全包')")
             assert 'XR80080' not in admin.evaluate('orders[0].raw')
             assert admin.evaluate('orders[0].title')=='铲车/叉车起重车驾驶员（货仓）'
@@ -166,10 +170,42 @@ with tempfile.TemporaryDirectory() as tmp:
             assert fixed['raw']=='【岗位】西餐帮厨\n【性别要求】男\n【工资薪酬】16310/月'
             remote=staff.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='legacy-kitchen'))")
             assert remote['code']==fixed['code'] and remote['gender']=='男' and remote['salary']=='16310/月'
+            # Whole-document multi-order guard, automatic segmentation and full supplier suffix.
+            admin.set_viewport_size({'width':1440,'height':1000})
+            multiple='侍应生 男女不限 35岁以下 粤语\n工资待遇：17500HKD 有工作餐 住宿扣2500\n工作时间：每周6天*10小时班\n总价30500元含劳务办证，保险另计\n\n粤菜厨师 男 45岁以下 粤语\n工资待遇：21000HKD 有工作餐 住宿扣2500\n工作时间：每周6天*10小时班\n要求：会海鲜类的中餐，有管理经验优先'
+            admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
+            admin.locator('#raw').fill(multiple);count=admin.evaluate('orders.length')
+            admin.evaluate('autoParse()');assert '多份原单' in admin.locator('#recognition-feedback').inner_text()
+            assert admin.locator('#o-title').input_value()==''
+            admin.locator('#o-title').fill('人工输入');admin.locator('#o-code').fill('ZY-26-1103-80');admin.locator('#o-gender').select_option('男')
+            admin.evaluate('saveOrder()');assert admin.evaluate('orders.length')==count
+            admin.evaluate('moveSourceToBatch()');assert admin.evaluate('batch.length')==2
+            assert admin.evaluate('batch.map(o=>o.title)')==['侍应生','粤菜厨师']
+            assert admin.evaluate('batch.map(o=>o.salary)')==['17500HKD','21000HKD']
+            # Existing company orders are re-recognised only after preview and explicit Save.
+            source='需过港面试，附刀工视频\n岗位【SUPPLIER-20991234砧板师傅】\n（批文厨房帮工）\n工作要求：\n1.男性，30-40岁，有经验\n2.粤语流利\n3.工作时间：10.5小时，上6休1\n4.薪资待遇：$19000，包吃2餐，住宿扣2500\n津贴：HKD500\n31000'
+            admin.evaluate("""async(raw)=>{const record={id:'recognition-preview',code:'ZY-26-1103-81',title:'（批文厨房帮工）',gender:'男',salary:'$19000，包吃2餐，住宿扣2500',price:'4.8w',status:'ready',createdAt:new Date().toISOString(),raw};const result=await api('/api/orders',{method:'PUT',body:{orders:[record,...orders],revision}});revision=result.revision;orders=[record,...orders]}""",source)
+            admin.evaluate("editOrder('recognition-preview')")
+            admin.evaluate('reparseExistingOrder()')
+            assert admin.locator('#o-title').input_value()=='砧板师傅'
+            assert admin.locator('#o-code').input_value()=='ZY-26-1103-81 SUPPLIER'
+            assert admin.locator('#o-gender').input_value()=='男'
+            assert admin.locator('#o-rest').input_value()=='上6休1'
+            assert admin.locator('#o-salary').input_value()=='$19000'
+            assert admin.locator('#o-price').input_value()=='4.8w'
+            assert 'HKD500' in admin.locator('#o-notes').input_value()
+            assert '2500' not in admin.locator('#o-notes').input_value()
+            unchanged=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
+            assert unchanged['title']=='（批文厨房帮工）'
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
+            saved=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
+            assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
+            assert saved['title']=='砧板师傅' and saved['salary']=='$19000' and saved['raw']==source
+            assert isinstance(saved['parsedSnapshot'],str) and isinstance(saved['manualFields'],str)
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill, full batch field parity, UI-only English/Chinese without form loss; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill, full batch field parity, UI-only English/Chinese without form loss, whole-document splitting, full supplier prefix and review-before-save; no browser errors')
     finally:
         server.shutdown();server.server_close()
