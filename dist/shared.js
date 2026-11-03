@@ -16,7 +16,13 @@ function loginScreen(message=''){
 }
 async function enterWorkspace(data){
   sessionUser=data.user;csrf=data.csrf;
-  const result=await api('/api/orders');orders=result.orders;revision=result.revision;
+  let result=await api('/api/orders');
+  const repaired=ZYOrderParser.repairLegacyOrders(result.orders);
+  if(JSON.stringify(repaired)!==JSON.stringify(result.orders)){
+    try{const saved=await api('/api/orders',{method:'PUT',body:{orders:repaired,revision:result.revision}});result={orders:repaired,revision:saved.revision}}
+    catch(e){result=await api('/api/orders');toast('旧公司单修正尚未完成：'+e.message)}
+  }
+  orders=result.orders;revision=result.revision;
   $('#login')?.remove();$('aside').hidden=false;$('main').hidden=false;
   $('aside footer').innerHTML=`<span>${esc(sessionUser.username)} · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div>`;
   worker={};editing=null;go('dashboard');lastSync=Date.now();

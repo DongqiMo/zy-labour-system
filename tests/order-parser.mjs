@@ -41,3 +41,27 @@ const legacy={...o,raw:sample,title:'招聘岗位',employer:'【更新】XR80080
 assert.equal(display.title,o.title);assert.equal(display.employer,'香港某公司');assert(!display.raw.includes('XR80080'));assert.equal(legacy.raw,sample);
 assert.equal(present({...legacy,title:'手动修改的叉车司机'}).title,'手动修改的叉车司机');
 console.log('PASS: exact forklift sample, labelled/traditional/multiline jobs, upstream IDs removed, currency/numbers preserved, salary/noise separation, legacy display without archive mutation');
+const kitchen=`选表香港面试
+【岗位】西餐帮厨
+【年龄要求】35 岁以下
+【性别要求】男
+【合约期限】24个月
+【工资薪酬】16310/月
+【工作时间】每天 9 小时，每周 6 天，需轮班
+【语言要求】粤语
+【食宿安排】包工作餐，雇主提供宿舍扣租金大约2500/月
+【工作内容】需有厨房及切配经验`;
+const cook=parse(kitchen,'ZY-26-1103-01');
+assert.equal(cook.title,'西餐帮厨');assert.equal(cook.gender,'男');assert.equal(cook.salary,'16310/月');assert.equal(cook.age,'35 岁以下');assert.match(cook.notes,/2500\/月/);assert.equal(cook.workContent,'需有厨房及切配经验');
+assert.equal(parse('【性別要求】男\n【工資薪酬】港幣16,310/月').gender,'男');assert.equal(parse('【性別要求】男\n【工資薪酬】港幣16,310/月').salary,'港幣16,310/月');
+assert.equal(parse('【备注】提供宿舍\n【合约期限】24个月\n【岗位】帮厨').notes,'提供宿舍');
+assert.equal(ZYOrderParser.cleanField('gender','要求】 男'),'男');assert.equal(ZYOrderParser.cleanField('salary','薪酬】 16310/月'),'16310/月');
+assert.equal(ZYOrderParser.cleanField('salary','HKD17118（薪酬含津贴）'),'HKD17118（薪酬含津贴）');assert.equal(ZYOrderParser.cleanField('gender','男，有经验要求'),'男，有经验要求');
+const historical={...cook,id:'old-cook',code:'V-11.3-01',raw:kitchen,createdAt:'2026-11-03T08:00:00Z',gender:'要求】 男',salary:'薪酬】 16310/月'};
+const valid={...historical,id:'valid-order',code:'ZY-26-1103-01',gender:'女',salary:'HKD 20,000',title:'手动确认的岗位'};
+const before=JSON.stringify([historical,valid]);const fixed=ZYOrderParser.repairLegacyOrders([historical,valid]);
+assert.equal(fixed[0].code,'ZY-26-1103-02');assert.equal(fixed[0].gender,'男');assert.equal(fixed[0].salary,'16310/月');assert.equal(fixed[0].raw,kitchen);assert.deepEqual(fixed[1],valid);assert.equal(JSON.stringify([historical,valid]),before);
+assert.deepEqual(ZYOrderParser.repairLegacyOrders(fixed),fixed);
+assert.equal(ZYOrderParser.repairLegacyOrders([{...historical,code:'V-11.3-08'}])[0].code,'ZY-26-1103-08');
+assert.equal(ZYOrderParser.repairLegacyOrders([{...historical,code:'CUSTOM-01'}])[0].code,'CUSTOM-01');
+console.log('PASS: exact kitchen sample, complete bracket labels, salary format, safe legacy field cleanup and collision-free/idempotent V-code repair');

@@ -77,10 +77,19 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
+            # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
+            admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
+            admin.reload();admin.wait_for_selector('#syncStatus')
+            fixed=admin.evaluate("orders.find(o=>o.id==='legacy-kitchen')")
+            assert fixed['code'].startswith('ZY-26-1103-')
+            assert fixed['gender']=='男' and fixed['salary']=='16310/月'
+            assert fixed['raw']=='【岗位】西餐帮厨\n【性别要求】男\n【工资薪酬】16310/月'
+            remote=staff.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='legacy-kitchen'))")
+            assert remote['code']==fixed['code'] and remote['gender']=='男' and remote['salary']=='16310/月'
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal and labelled single/batch job parsing; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair; no browser errors')
     finally:
         server.shutdown();server.server_close()

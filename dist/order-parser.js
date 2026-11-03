@@ -13,12 +13,12 @@
  const aliases={
   title:['职位名称','職位名稱','招聘职位','招聘職位','招聘岗位','招聘崗位','招聘工种','招聘工種','招聘職種','招聘职种','职位','職位','岗位','崗位','工种','工種'],
   employer:['雇主名称','僱主名稱','公司名称','公司名稱','雇主','僱主','公司','单位','單位'],
-  salary:['薪资待遇','薪資待遇','薪金待遇','薪酬待遇','工资待遇','工資待遇','薪资','薪資','工资','工資','薪金','薪酬','月薪','待遇'],
-  gender:['招聘性别','招聘性別','性别','性別'],age:['年龄要求','年齡要求','年龄','年齡'],language:['语言要求','語言要求','语言','語言'],
+  salary:['工资薪酬','工資薪酬','工资薪酬待遇','工資薪酬待遇','薪资待遇','薪資待遇','薪金待遇','薪酬待遇','工资待遇','工資待遇','薪资','薪資','工资','工資','薪金','薪酬','月薪','待遇'],
+  gender:['性别要求','性別要求','招聘性别','招聘性別','性别','性別'],age:['年龄要求','年齡要求','年龄','年齡'],language:['语言要求','語言要求','语言','語言'],
   hours:['工作时间','工作時間','上班时间','上班時間','时间安排','時間安排','工时','工時'],shift:['班次'],rest:['每月休息','月休','休息'],
   workContent:['工作内容','工作內容','工作职责','工作職責','主要工作','职责','職責'],
   requirements:['工作要求','任职要求','任職要求','基本要求','基本条件','基本條件','要求'],
-  notes:['其他备注与费用','其他備註與費用','其他备注','其他備註','备注','備註','食宿','费用','費用'],interview:['面试方式','面試方式','面试时间','面試時間','面试','面試']
+  notes:['其他备注与费用','其他備註與費用','其他备注','其他備註','备注','備註','食宿安排','食宿','费用','費用'],interview:['面试方式','面試方式','面试时间','面試時間','面试','面試']
  };
  const labels=Object.entries(aliases).flatMap(([key,items])=>items.map(label=>({key,label}))).sort((a,b)=>b.label.length-a.label.length);
  const generic=/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位(?:名称)?|職位(?:名稱)?|岗位|崗位|工种|工種)$/;
@@ -45,6 +45,7 @@
   for(const line of lines){
    const tagged=matchLabel(line);
    if(tagged){current=tagged.key;pending=tagged.value?'':tagged.key;if(tagged.value){const v=tagged.key==='title'?titleValue(tagged.value):tagged.value;if(v)o[tagged.key]=o[tagged.key]?o[tagged.key]+'\n'+v:v}continue;}
+   if(/^[【\[][^】\]]+[】\]]/.test(line)){current=null;pending=null;continue;}
    if(pending){const v=pending==='title'?titleValue(line):line;if(v)o[pending]=v;pending=null;continue;}
    if(['requirements','workContent','notes'].includes(current)&&!/[：:]/.test(line)&&!/(?:工作地点|工作地點|公司招聘|公司招工)/.test(line))o[current]+='\n'+line;
    else current=null;
@@ -71,11 +72,34 @@
   if(!o.notes)o.notes=lines.filter(s=>/住宿|劳务费|勞務費|保险费|保險費|服务费|服務費|管理费|管理費|办证费|辦證費|假期/.test(s)).join('\n');
   return o;
  }
+ function cleanField(key,value){
+  if(typeof value!=='string')return value;
+  const remnants=key==='gender'?['性别要求','性別要求','招聘性别','招聘性別','性别','性別','要求']:key==='salary'?['工资薪酬','工資薪酬','薪资待遇','薪資待遇','工资待遇','工資待遇','工资','工資','薪酬','薪金']:[];
+  if(!remnants.length)return value;
+  // Repair only a recognisable label fragment with its closing bracket, not business text.
+  return value.replace(new RegExp('^\\s*[【\\[]?(?:'+remnants.map(escape).join('|')+')[】\\]]\\s*[:：]?\\s*'),'');
+ }
+ function repairLegacyOrders(records){
+  const repaired=records.map(order=>({...order,gender:cleanField('gender',order.gender),salary:cleanField('salary',order.salary)}));
+  const taken=new Set(records.map(o=>o.code));
+  for(const order of repaired){
+   const match=String(order.code||'').match(/^V-(\d{1,2})\.(\d{1,2})-(\d+)$/i);if(!match)continue;
+   const created=new Date(order.createdAt);if(isNaN(created))continue;
+   const month=Number(match[1]),day=Number(match[2]),year=created.getFullYear(),date=new Date(year,month-1,day);
+   if(date.getMonth()!==month-1||date.getDate()!==day)continue;
+   const prefix=`ZY-${String(year).slice(-2)}-${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}-`;
+   let candidate=prefix+String(Number(match[3])).padStart(2,'0');
+   if(taken.has(candidate)){const maximum=Math.max(0,...[...taken].filter(c=>typeof c==='string'&&c.startsWith(prefix)&&/^\d+$/.test(c.slice(prefix.length))).map(c=>Number(c.slice(prefix.length))));candidate=prefix+String(maximum+1).padStart(2,'0');}
+   taken.add(candidate);order.code=candidate;
+  }
+  return repaired;
+ }
  function present(order){
   const result={...order};for(const field of ['raw','title','employer','notes','requirements','workContent'])if(typeof result[field]==='string')result[field]=sanitizeRaw(result[field]);
   if(!result.title||generic.test(result.title.trim())){const corrected=parse(order.raw||'');if(corrected.title)result.title=corrected.title;}
+  for(const field of ['gender','salary'])result[field]=cleanField(field,result[field]);
   if(result.employer)result.employer=editorial(result.employer).replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'').trim();
   return result;
  }
- root.ZYOrderParser={parse,sanitizeRaw,present,titleValue};
+ root.ZYOrderParser={parse,sanitizeRaw,present,titleValue,cleanField,repairLegacyOrders};
 })(globalThis);
