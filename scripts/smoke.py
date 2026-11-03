@@ -23,6 +23,11 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.on('pageerror',lambda e:errors.append(str(e)))
                 page.goto(url);page.wait_for_selector('#loginForm')
                 page.locator('[name=username]').fill(username);page.locator('[name=password]').fill(password)
+                page.locator('#login-language [data-language-toggle]').click()
+                assert page.locator('[name=username]').input_value()==username
+                assert page.locator('[name=password]').input_value()==password
+                assert page.locator('#loginForm button').inner_text()=='Sign In'
+                page.locator('#login-language [data-language-toggle]').click()
                 page.locator('#loginForm button').click();page.wait_for_selector('#syncStatus')
                 assert page.locator('.card').count()==0,'Shared mode must not create seed orders'
                 for selector in ['html','body','main','#content']:
@@ -58,9 +63,30 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.reload();admin.wait_for_selector('#syncStatus');admin.evaluate("go('workerRecords')");admin.wait_for_selector('.workerrow')
             admin.evaluate('previewWorker(workers[0])');assert admin.locator('dialog[open]').count()==1
             admin.evaluate("document.querySelector('#modal').close()")
+            # Every operation page translates, while entered business values remain untouched.
+            admin.locator('header [data-language-toggle]').click()
+            for target,heading in [('dashboard','Today’s Orders'),('orders','Order Database'),('workers','Worker Registration'),('workerRecords','Registered Workers')]:
+                admin.evaluate('(target)=>go(target)',target)
+                admin.wait_for_function('(heading)=>document.querySelector("h1")?.textContent===heading',arg=heading)
+                untranslated=admin.evaluate("""()=>{const found=[];const w=document.createTreeWalker(document.querySelector('#content'),NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(!n.parentElement.closest('[data-user-content],pre,textarea,input,script,style')&&/[\u3400-\u9fff]/.test(n.nodeValue))found.push(n.nodeValue.trim())}return found}""")
+                assert not untranslated,(target,untranslated)
+            admin.evaluate("worker={};go('workers')")
+            admin.locator('#w-name').fill('未保存姓名：工作要求');admin.locator('#w-phone').fill('12345678')
+            admin.locator('header [data-language-toggle]').click()
+            assert admin.locator('#w-name').input_value()=='未保存姓名：工作要求'
+            admin.locator('header [data-language-toggle]').click()
+            assert admin.locator('#w-name').input_value()=='未保存姓名：工作要求'
+            admin.locator('header [data-language-toggle]').click()
             # Account management UI and staff restrictions.
             admin.evaluate('accountDialog()');admin.wait_for_selector('#userForm')
             assert 'colleague' in admin.locator('#teamUsers').inner_text()
+            admin.locator('#passwordForm [name=current]').fill('unsaved-test-value')
+            admin.locator('#modal [data-language-toggle]').click()
+            assert admin.locator('#modal h2').inner_text()=='Account Settings'
+            assert admin.locator('#passwordForm [name=current]').input_value()=='unsaved-test-value'
+            assert admin.locator('#userForm select').input_value()=='staff'
+            admin.locator('#modal [data-language-toggle]').click()
+            assert admin.locator('#passwordForm [name=current]').input_value()=='unsaved-test-value'
             admin.evaluate("document.querySelector('#modal').close()")
             staff.evaluate('accountDialog()');assert staff.locator('#userForm').count()==0
             staff.evaluate("document.querySelector('#modal').close()")
@@ -91,13 +117,49 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
-            admin.locator('#batchpreview select').nth(0).select_option('女');admin.locator('#batchpreview select').nth(1).select_option('男')
+            assert admin.locator('#batch-fields input,#batch-fields textarea,#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
+            assert admin.locator('#batch-fields [id]').evaluate_all('(elements)=>elements.map(e=>e.id.slice(4)).sort()')==admin.evaluate('Object.keys(orderFields).sort()')
+            admin.locator('#b-0-gender').select_option('女')
+            admin.locator('#b-0-requirements').fill('批量备注：工作要求')
+            admin.locator('#b-0-language').fill('粤语、英语')
+            admin.locator('#b-0-interview').fill('现场面试')
+            admin.locator('#b-0-rest').fill('每月4天')
+            admin.locator('#b-0-price').fill('3.9w')
+            admin.locator('#b-0-salary').fill('HKD 20,000')
+            assert admin.locator('#b-0-price').input_value()=='3.9w'
+            admin.locator('#b-0-price').fill('')
+            before=admin.evaluate('JSON.stringify(batch)')
+            source=admin.locator('#batch-item-raw').input_value()
+            admin.locator('header [data-language-toggle]').click()
+            assert admin.locator('h1').inner_text()=='Prepare New Order'
+            assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
+            assert admin.locator('#batch-item-raw').input_value()==source
+            assert admin.evaluate('JSON.stringify(batch)')==before
+            assert admin.locator('#b-0-gender').input_value()=='女'
+            assert admin.locator('#b-0-gender option').all_text_contents()==['Select recruitment gender','男','女','男女不限']
+            # Both columns use the same layout as single entry.
+            assert admin.locator('#batch-source').bounding_box()['x']<admin.locator('#batch-review').bounding_box()['x']
+            admin.evaluate('selectBatchItem(1)')
+            admin.locator('#b-1-gender').select_option('男');admin.locator('#b-1-price').fill('4.6w')
+            admin.evaluate('selectBatchItem(0)')
+            assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
+            assert admin.locator('#b-0-language').input_value()=='粤语、英语'
+            admin.locator('header [data-language-toggle]').click()
             admin.evaluate('saveBatch()');admin.wait_for_selector('.card')
             assert admin.evaluate("orders.slice(0,2).map(o=>o.gender)")==['女','男']
+            assert admin.evaluate('orders.slice(0,2).map(o=>o.status)')==['draft','ready']
+            assert admin.evaluate('orders[0].requirements')=='批量备注：工作要求'
+            assert admin.evaluate('orders[0].interview')=='现场面试'
+            assert admin.evaluate('orders[1].price')=='4.6w'
             assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
             admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
+            admin.locator('header [data-language-toggle]').click()
             admin.reload();admin.wait_for_selector('#syncStatus')
+            assert admin.evaluate('ZYI18n.language')=='en'
+            admin.set_viewport_size({'width':390,'height':844})
+            assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            admin.locator('header [data-language-toggle]').click()
             fixed=admin.evaluate("orders.find(o=>o.id==='legacy-kitchen')")
             assert fixed['code'].startswith('ZY-26-1103-')
             assert fixed['gender']=='男' and fixed['salary']=='16310/月'
@@ -108,6 +170,6 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill, full batch field parity, UI-only English/Chinese without form loss; no browser errors')
     finally:
         server.shutdown();server.server_close()

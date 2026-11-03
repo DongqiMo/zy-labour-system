@@ -24,7 +24,7 @@ async function enterWorkspace(data){
   }
   orders=result.orders;revision=result.revision;
   $('#login')?.remove();$('aside').hidden=false;$('main').hidden=false;
-  $('aside footer').innerHTML=`<span>${esc(sessionUser.username)} · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div>`;
+  $('aside footer').innerHTML=`<span><span data-user-content>${esc(sessionUser.username)}</span> · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div>`;
   worker={};editing=null;go('dashboard');lastSync=Date.now();
 }
 async function logout(){try{await api('/api/logout',{method:'POST',body:{}});loginScreen('已退出登录')}catch(e){toast(e.message)}}
@@ -37,7 +37,7 @@ async function accountDialog(){
     try{await renderUsers();const state=await api('/api/maintenance');$('#maintenanceStatus').textContent=state.readOnly?'当前：已暂停写入（只读）':'当前：正常读写'}catch(e){toast(e.message)}
   }
 }
-async function renderUsers(){const {users}=await api('/api/users');$('#teamUsers').innerHTML=users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span>${esc(u.username)} · ${u.role==='admin'?'管理员':'员工'} · ${u.active?'使用中':'已停用'}</span>${u.active&&u.id!==sessionUser.id?`<button class="danger" onclick="disableUser('${esc(u.id)}')">停用</button>`:''}</div>`).join('')}
+async function renderUsers(){const {users}=await api('/api/users');$('#teamUsers').innerHTML=users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span><span data-user-content>${esc(u.username)}</span> · ${u.role==='admin'?'管理员':'员工'} · ${u.active?'使用中':'已停用'}</span>${u.active&&u.id!==sessionUser.id?`<button class="danger" onclick="disableUser('${esc(u.id)}')">停用</button>`:''}</div>`).join('')}
 async function disableUser(id){if(!confirm('停用此账号并立即撤销其登录？'))return;try{await api('/api/users/disable',{method:'POST',body:{id}});await renderUsers()}catch(e){toast(e.message)}}
 async function performSync(){
  if(!sessionUser||saving||document.hidden||$('#modal').open||!['dashboard','orders','workerRecords'].includes(view))return;
