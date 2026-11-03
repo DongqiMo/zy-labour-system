@@ -65,3 +65,22 @@ assert.deepEqual(ZYOrderParser.repairLegacyOrders(fixed),fixed);
 assert.equal(ZYOrderParser.repairLegacyOrders([{...historical,code:'V-11.3-08'}])[0].code,'ZY-26-1103-08');
 assert.equal(ZYOrderParser.repairLegacyOrders([{...historical,code:'CUSTOM-01'}])[0].code,'CUSTOM-01');
 console.log('PASS: exact kitchen sample, complete bracket labels, salary format, safe legacy field cleanup and collision-free/idempotent V-code repair');
+const normalize=ZYOrderParser.normalizeGender;
+for(const [text,expected]of [
+ ['男','男'],['【性别要求】 男（35岁以下）','男'],['要求】 男','男'],['只招男性，有经验','男'],
+ ['女','女'],['女士，懂粤语','女'],['招聘性別】女，年龄不限','女'],['女性，有男装销售经验','女'],
+ ['男女不限','男女不限'],['男/女均可','男女不限'],['男、女','男女不限'],['性别不限（年龄40以下）','男女不限'],['不限','男女不限'],['男（女也可）','男女不限'],
+ ['男，不收女','男'],['不招男，只招女','女'],['男，负责女厕清洁','男'],['不招男，不招女',''],['未注明',''],['年龄不限','']
+])assert.equal(normalize(text),expected,text);
+assert.equal(normalize('', '【岗位】男装店销售\n【基本要求】女性，懂粤语'),'女');
+assert.equal(normalize('', '【岗位】男女装销售\n【年龄要求】不限'),'');
+assert.equal(normalize('', '【性别要求】待确认\n【工作内容】接待男女顾客'),'');
+assert.equal(normalize('', '【性别要求】\n女\n【年龄】30岁'),'女');
+for(const input of ['性别要求】 男，35岁','女（懂粤语）','男/女均可','不限','未填写','【不明】？？']){
+ const view=present({...historical,gender:input,raw:''});assert(['','男','女','男女不限'].includes(view.gender));
+ assert.equal(normalize(normalize(input)),normalize(input));
+}
+assert.equal(parse('【岗位】厨师\n【性别要求】男（35岁以下）').gender,'男');
+assert.equal(parse('【岗位】服务员\n【性别要求】女士，懂粤语').gender,'女');
+assert.equal(parse('【岗位】清洁员\n【基本要求】男女不限，年龄不限').gender,'男女不限');
+console.log('PASS: gender enum, bracket/punctuation/qualifier removal, explicit-label precedence, exclusions, uncertain values remain unassigned');

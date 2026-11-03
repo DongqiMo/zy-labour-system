@@ -33,7 +33,12 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.locator('#o-title').input_value()=='共享厨师'
             assert staff.locator('#o-salary').input_value()=='HKD 18,799'
             assert staff.evaluate("suggestion('HKD 18,799')")=='3.8w'
-            staff.locator('#o-price').fill('3.8w');staff.evaluate('saveOrder()');staff.wait_for_selector('.card')
+            assert staff.locator('#o-gender').evaluate('(e)=>e.tagName')=='SELECT'
+            assert staff.locator('#o-gender option').all_text_contents()==['请选择招聘性别','男','女','男女不限']
+            staff.locator('#o-price').fill('3.8w');staff.evaluate('saveOrder()')
+            assert '请选择招聘性别' in staff.locator('.toast').inner_text()
+            assert staff.evaluate('orders.length')==0
+            staff.locator('#o-gender').select_option('男女不限');staff.evaluate('saveOrder()');staff.wait_for_selector('.card')
             admin.evaluate('syncShared()');admin.wait_for_selector('.card');assert '共享厨师' in admin.locator('.card').inner_text()
             # Two editors started from the same revision: second save must not overwrite.
             for page in [admin,staff]:page.evaluate('editOrder(orders[0].id)')
@@ -77,6 +82,11 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
+            admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
+            admin.locator('#batchpreview select').nth(0).select_option('女');admin.locator('#batchpreview select').nth(1).select_option('男')
+            admin.evaluate('saveBatch()');admin.wait_for_selector('.card')
+            assert admin.evaluate("orders.slice(0,2).map(o=>o.gender)")==['女','男']
+            assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
             admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
             admin.reload();admin.wait_for_selector('#syncStatus')
@@ -90,6 +100,6 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation; no browser errors')
     finally:
         server.shutdown();server.server_close()

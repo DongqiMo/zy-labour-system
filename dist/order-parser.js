@@ -62,7 +62,7 @@
    if(header)o.employer=header.replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'').trim();
   }
   if(!o.salary)o.salary=clean.match(/(?:HKD|港币|港幣|港元|\$)\s*[\d,]+(?:\.\d+)?(?:[–~至-]\s*[\d,]+)?(?:\s*[（(][^）)\n]*[）)])?/i)?.[0]||'';
-  if(!o.gender)o.gender=/男女|不限性别|不限性別|性别不限|性別不限/.test(clean)?'男女不限':/女性|女工|限女/.test(clean)?'女':/男性|男工|限男/.test(clean)?'男':'';
+  o.gender=normalizeGender(o.gender,raw);
   if(!o.age)o.age=clean.match(/\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]?(?:左右)?|\d{2}[岁歲]以下/)?.[0]||'';
   if(!o.language)o.language=[...new Set(clean.match(/粤语|粵語|普通话|普通話|英语|英語|日语|日語|韩语|韓語|客家话|客家話|潮汕话|潮汕話/g)||[])].join('、');
   if(!o.hours)o.hours=clean.match(/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時)/)?.[0]||'';
@@ -72,6 +72,37 @@
   if(!o.notes)o.notes=lines.filter(s=>/住宿|劳务费|勞務費|保险费|保險費|服务费|服務費|管理费|管理費|办证费|辦證費|假期/.test(s)).join('\n');
   return o;
  }
+ function genderFromText(value){
+  const text=String(value??'').replace(/\s+/g,'').replace(/性別/g,'性别');
+  if(!text)return '';
+  const noMale=/(?:不要|不招|不收|不接受|不招聘|谢绝|謝絕|不考虑|不考慮)(?:男性|男士|男工|男)|(?:男性|男士|男工|男)(?:不要|勿扰|勿擾|不考虑|不考慮)/.test(text);
+  const noFemale=/(?:不要|不招|不收|不接受|不招聘|谢绝|謝絕|不考虑|不考慮)(?:女性|女士|女工|女)|(?:女性|女士|女工|女)(?:不要|勿扰|勿擾|不考虑|不考慮)/.test(text);
+  const male=text.includes('男'),female=text.includes('女');
+  if(noMale&&noFemale)return '';
+  if(noMale)return '女';if(noFemale)return '男';
+  const both=/(?:男女|女男)(?:不限|均可|皆可|都可|都行|均招|兼收|都可以|[，,；;。()（）]|$)|男[、，,/／|或和及]+女(?=均|皆|都|不限|可|[，,；;。()（）]|$)|女[、，,/／|或和及]+男(?=均|皆|都|不限|可|[，,；;。()（）]|$)|女(?:性)?也可|男(?:性)?也可/.test(text);
+  if(both||/性别(?:不限|不拘)|不限性别|不拘性别|無性别要求|无性别要求/.test(text)||/^(?:不限|不限制|均可|皆可)(?:[，,（(]|$)/.test(text))return '男女不限';
+  if(male&&female){if(/^(?:男|男性|男士|男工)(?=[，,；;。()（）]|$)/.test(text))return '男';if(/^(?:女|女性|女士|女工)(?=[，,；;。()（）]|$)/.test(text))return '女';return ''}
+  if(male)return '男';if(female)return '女';return '';
+ }
+ function normalizeGender(value,raw=''){
+  const direct=genderFromText(cleanField('gender',value));if(direct)return direct;
+  const lines=String(raw||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  for(let i=0;i<lines.length;i++){
+   const label=matchLabel(lines[i]);if(label?.key==='gender'){
+    const resolved=genderFromText(label.value||(!matchLabel(lines[i+1]||'')?lines[i+1]:''));
+    // Explicit but unclear gender takes precedence over unrelated prose.
+    return resolved;
+   }
+  }
+  const candidates=lines.filter(line=>{
+   const label=matchLabel(line);
+   if(label)return label.key==='requirements';
+   return /男女(?:不限|均可|皆可)|(?:急招|招聘|只招|限招|仅限|僅限|性别|性別)/.test(line);
+  });
+  for(const text of candidates){const result=genderFromText(text);if(result)return result}
+  return '';
+ }
  function cleanField(key,value){
   if(typeof value!=='string')return value;
   const remnants=key==='gender'?['性别要求','性別要求','招聘性别','招聘性別','性别','性別','要求']:key==='salary'?['工资薪酬','工資薪酬','薪资待遇','薪資待遇','工资待遇','工資待遇','工资','工資','薪酬','薪金']:[];
@@ -80,7 +111,7 @@
   return value.replace(new RegExp('^\\s*[【\\[]?(?:'+remnants.map(escape).join('|')+')[】\\]]\\s*[:：]?\\s*'),'');
  }
  function repairLegacyOrders(records){
-  const repaired=records.map(order=>({...order,gender:cleanField('gender',order.gender),salary:cleanField('salary',order.salary)}));
+  const repaired=records.map(order=>({...order,gender:normalizeGender(order.gender,order.raw),salary:cleanField('salary',order.salary)}));
   const taken=new Set(records.map(o=>o.code));
   for(const order of repaired){
    const match=String(order.code||'').match(/^V-(\d{1,2})\.(\d{1,2})-(\d+)$/i);if(!match)continue;
@@ -97,9 +128,9 @@
  function present(order){
   const result={...order};for(const field of ['raw','title','employer','notes','requirements','workContent'])if(typeof result[field]==='string')result[field]=sanitizeRaw(result[field]);
   if(!result.title||generic.test(result.title.trim())){const corrected=parse(order.raw||'');if(corrected.title)result.title=corrected.title;}
-  for(const field of ['gender','salary'])result[field]=cleanField(field,result[field]);
+  result.gender=normalizeGender(result.gender,result.raw);result.salary=cleanField('salary',result.salary);
   if(result.employer)result.employer=editorial(result.employer).replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'').trim();
   return result;
  }
- root.ZYOrderParser={parse,sanitizeRaw,present,titleValue,cleanField,repairLegacyOrders};
+ root.ZYOrderParser={parse,sanitizeRaw,present,titleValue,cleanField,repairLegacyOrders,normalizeGender};
 })(globalThis);
