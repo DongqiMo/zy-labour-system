@@ -14,7 +14,8 @@ function coverage(result){
  for(let i=0;i<raw.length;i++)if(!/[\s，,；;。]/.test(raw[i]))assert(covered[i],`Unaccounted character at ${i}: ${raw.slice(i,i+12)}`);
 }
 for(const fixture of catalog.cases){
- const result=P.analyze(fixture.source,'ZY-26-1103-90');assert(result.order,fixture.id);const view=P.present(result.order);
+ const result=P.analyze(fixture.source,'ZY-26-1103-90');assert(result.order,fixture.id);if(fixture.savedRecord){const saved={...result.order,...fixture.savedRecord};assert.equal(P.isHumanReviewed(saved),fixture.expectedReviewed,fixture.id);assert.deepEqual(P.validateCompany(saved,true),[]);}
+ const view=P.present(result.order);
  for(const [key,value]of Object.entries(fixture.expected||{}))assert.equal(view[key],value,fixture.id+' '+key);
  for(const [key,values]of Object.entries(fixture.contains||{}))for(const value of values)assert(view[key].includes(value),fixture.id+' '+key+' missing '+value);
  const company=businessKeys.map(key=>view[key]||'').join('\n');for(const value of fixture.forbidden||[])assert(!company.includes(value),fixture.id+' leaked '+value);
@@ -46,3 +47,15 @@ const oldShift={hours:'每天9小时',shift:'轮班',salary:'18000',raw:'旧原�
 globalThis.window=globalThis;globalThis.loginScreen=()=>{};await import('../dist/order-audit.js');
 const sourceCase=catalog.cases.find(c=>c.id==='REC-013');const audit=ZYOrderAudit.inspect({id:'audit-synthetic',code:'ZY-26-1103-90 CV',raw:sourceCase.source,salary:'1',title:'旧职位'});assert(audit.missing.includes('workContent'));assert.equal(audit.candidate.workContent,'');assert.equal(audit.candidate.salary,'HKD14260+');assert(!audit.unsupported.length);assert(audit.changed.includes('salary'));assert(audit.sources.salary.length);
 console.log('PASS: shift merged into hours, read-only self-audit, field provenance and no invented duties');
+
+// Human confirmation is durable across parser releases and overrides machine disagreement.
+const reviewedSource=catalog.cases.find(c=>c.id==='REC-005').source;
+const manualRecord={...P.parse(reviewedSource,'ZY-26-1103-90'),id:'manual-reviewed',status:'ready',price:'4w',title:'人工确认的厨师',employer:'人工确认的雇主',reviewConfirmation:'8-54-8fc57fbe'};
+assert(P.isHumanReviewed(manualRecord));assert.deepEqual(P.validateCompany(manualRecord,true),[]);assert.equal(ZYOrderAudit.inspect(manualRecord).needsReview,false);assert.equal(ZYOrderAudit.inspect(manualRecord).candidate.title,'人工确认的厨师');
+const stamp=P.humanReviewMetadata(manualRecord,'test-owner');assert.equal(stamp.humanReviewedSource,P.reviewSignature(reviewedSource));
+assert(P.isHumanReviewed({...manualRecord,...stamp,parserVersion:'future-version'}));
+assert(!P.isHumanReviewed({...manualRecord,...stamp,raw:'changed source\n'+reviewedSource}));
+const legacyManual={...manualRecord,reviewConfirmation:'',manualFields:'["title"]',parsedSnapshot:JSON.stringify({title:'旧识别标题'})};assert(P.isHumanReviewed(legacyManual));assert.equal(ZYOrderAudit.inspect(legacyManual).needsReview,false);
+const unreviewed={...manualRecord,title:'厨师',reviewConfirmation:'',manualFields:'[]'};assert(!P.isHumanReviewed(unreviewed));assert(P.validateCompany(unreviewed,true).length);
+assert(P.validateCompany({...manualRecord,...stamp,gender:''},true).length);assert(P.validateCompany({...manualRecord,...stamp,notes:'上家全包35000'},true).length);
+console.log('PASS: durable historical review tokens, manual-save precedence, no audit re-warning, changed-source invalidation and retained field/fee checks');

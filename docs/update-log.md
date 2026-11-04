@@ -1,5 +1,15 @@
 # Website Update Log
 
+## 2026-11-03: Urgent fix for completed human reviews (parser version 11)
+
+- Root causes: review tokens included the parser version, so upgrades invalidated old confirmations; raw-parser disagreement and audit comparisons could overrule manually corrected company orders.
+- Review fingerprints are now independent of parser versions, with compatibility for historical version-prefixed tokens. Genuine source changes still invalidate the source confirmation.
+- Saving an existing company order is the human-review action: it records durable review source, timestamp, and reviewer metadata and immediately enables valid company text and copying without another checkbox.
+- Existing confirmation tokens and persisted meaningful manual-field edits are recognized as review evidence. A ready price status alone is not assumed to prove human review.
+- Human-reviewed orders are excluded from parser-uncertainty warnings and audit re-review counts. Required company fields, code validity, and upstream-price confidentiality checks remain active.
+- Added a one-click Mark as Reviewed action for historical records lacking review metadata; it preserves company fields and original source while storing confirmation metadata.
+- Added REC-016 and regression coverage for old tokens, manual-save publication, audit precedence, source-change invalidation, and unchanged fee/required-field checks. Parser and full browser acceptance checks passed.
+
 ## 2026-11-03: Source audit, compact-role recognition, hours-only shifts, and original worker template
 
 ### Order recognition and self-audit (parser version 10)

@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='10';
+ const VERSION='11';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?!\d+(?:\.\d+)?\s*(?:度|℃|°C))/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -357,10 +357,30 @@
  }
  function reviewSignature(raw){
   const text=sanitizeRaw(raw);let hash=2166136261;for(let i=0;i<text.length;i++)hash=Math.imul(hash^text.charCodeAt(i),16777619);
-  return VERSION+'-'+text.length+'-'+(hash>>>0).toString(16);
+  return 'S1-'+text.length+'-'+(hash>>>0).toString(16);
+ }
+ function hasReviewConfirmation(order){
+  const expected=reviewSignature(order.raw||'');
+  const token=String(order.reviewConfirmation||'');
+  return token===expected||/^\d+-\d+-[a-f0-9]+$/i.test(token)&&token.replace(/^\d+-/,'S1-')===expected;
+ }
+ function isHumanReviewed(order){
+  if(order.humanReviewedSource)return order.humanReviewedSource===reviewSignature(order.raw||'');
+  if(hasReviewConfirmation(order))return true;
+  // Legacy evidence only: ready is a price status, not proof of human review.
+  if(!order.id||order.status!=='ready')return false;
+  try{
+   const fields=JSON.parse(order.manualFields||'[]'),baseline=JSON.parse(order.parsedSnapshot||'{}');
+   const editable=['title','employer','salary','gender','age','language','hours','rest','workContent','requirements','notes','interview'];
+   return Array.isArray(fields)&&fields.some(key=>editable.includes(key)&&String(order[key]||'').trim()&&String(order[key]||'')!==String(baseline[key]||''));
+  }catch{return false;}
+ }
+ function humanReviewMetadata(order,reviewer=''){
+  return {humanReviewedSource:reviewSignature(order.raw||''),humanReviewedAt:new Date().toISOString(),humanReviewedBy:String(reviewer||''),reviewConfirmation:reviewSignature(order.raw||'')};
  }
  function reviewOrder(input,order){
   const fresh=parseOne(input,order.code||''),ledger=JSON.parse(fresh.recognitionAudit).fragments;
+  const reviewed=isHumanReviewed({...order,raw:input});
   const sources={},warnings=[];
   for(const entry of ledger)if(entry.fields.length)for(const key of entry.fields)(sources[key]??=[]).push(entry.text);
   for(const key of Object.keys(sources))sources[key]=unique(sources[key]);
@@ -375,7 +395,7 @@
   if(/^休\s*\d+$/.test(String(order.rest||'').trim()))warnings.push('休息周期不明确，请确认是每周还是每月');
   if(unclassified.length)warnings.push('部分原单内容尚未分类，请核对未分类内容');
   if(conflicts.some(entry=>entry.fields.includes('salary')))warnings.push('识别到多组薪资，请人工核对或拆分原单');
-  return {warnings:unique(warnings),sources,unclassified,excluded,conflicts,ledger,needsAcknowledgement:!!(unclassified.length||conflicts.length)};
+  return {warnings:reviewed?[]:unique(warnings),sources,unclassified:reviewed?[]:unclassified,excluded,conflicts:reviewed?[]:conflicts,ledger,reviewed,needsAcknowledgement:!reviewed&&!!(unclassified.length||conflicts.length)};
  }
  function parse(input,code=''){const result=analyze(input,code);return result.order||{raw:sanitizeRaw(input),code,needsSplit:true,title:'',gender:'',salary:''}}
  function sanitizeCompany(order){
@@ -396,7 +416,7 @@
   return result;
  }
  function validateCompany(order,forPublication=false){
-  const errors=[];if(forPublication&&Number(order.parserVersion)>=8&&reviewOrder(order.raw||'',order).needsAcknowledgement&&order.reviewConfirmation!==reviewSignature(order.raw||''))errors.push('请先核对未分类或冲突内容并确认');if(forPublication&&!order.salary)errors.push('未可靠识别主薪资，请人工核对');if(splitOrders(order.raw||'').length>1)errors.push('检测到多份原单，请使用批量录入或拆分后处理');
+  const errors=[],reviewed=isHumanReviewed(order);if(forPublication&&!reviewed&&Number(order.parserVersion)>=8&&reviewOrder(order.raw||'',order).needsAcknowledgement&&!hasReviewConfirmation(order))errors.push('请先核对未分类或冲突内容并确认');if(forPublication&&!order.salary)errors.push('未可靠识别主薪资，请人工核对');if(!reviewed&&splitOrders(order.raw||'').length>1)errors.push('检测到多份原单，请使用批量录入或拆分后处理');
   if(!order.title||generic.test(order.title)||/^[（(]?批文/.test(order.title))errors.push('未可靠识别职位，请人工核对');
   if(!['男','女','男女不限'].includes(order.gender))errors.push('请选择招聘性别：男、女或男女不限');
   if(!validCode(order.code))errors.push('公司单号格式应为 ZY-年份-月日-流水，可附上家字母');
@@ -423,5 +443,5 @@
   view.employer=editorial(view.employer||'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'');
   const result=sanitizeCompany(view);result.salary=formatCompanySalary(result.salary);return result;
  }
- root.ZYOrderParser={reviewSignature,formatCompanySalary,reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
+ root.ZYOrderParser={isHumanReviewed,hasReviewConfirmation,humanReviewMetadata,reviewSignature,formatCompanySalary,reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
 })(globalThis);

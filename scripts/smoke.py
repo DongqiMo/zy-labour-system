@@ -231,12 +231,25 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('editOrder(orders[0].id)')
             admin.locator('#o-notes').fill('附加条件已核实')
             admin.locator('.recognition-review > summary').click()
-            admin.locator('.review-confirm input').check()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='10'
-            assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation']
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='11'
+            assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
+            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
+            assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
+            assert admin.evaluate('o=>ZYOrderAudit.inspect(o).needsReview',reviewed) is False
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',reviewed)==[]
+            # Historical acknowledgements survive parser upgrades; one-click review changes metadata only.
+            legacy=admin.evaluate("""async(record)=>{const copy={...record,id:'legacy-reviewed-token',code:'ZY-26-1103-97',humanReviewedSource:'',humanReviewedAt:'',humanReviewedBy:'',manualFields:'[]',reviewConfirmation:ZYOrderParser.reviewSignature(record.raw).replace(/^S1-/,'8-')};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",reviewed)
+            assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',legacy)==[]
+            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
+            unmarked=admin.evaluate("""async(record)=>{const copy={...record,id:'unmarked-reviewed-order',code:'ZY-26-1103-98',reviewConfirmation:''};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",legacy)
+            assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true).length>0',unmarked)
+            admin.evaluate("markOrderReviewed('unmarked-reviewed-order')")
+            marked=admin.evaluate("api('/api/orders').then(result=>result.orders.find(o=>o.id==='unmarked-reviewed-order'))")
+            assert marked['humanReviewedSource']
+            assert all(marked[key]==unmarked[key] for key in ['raw','title','salary','gender','price'])
+            assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',marked)==[]
             # Batch uses the same classifier, and raw changes invalidate a prior confirmation.
             admin.evaluate("editing=null;mode='batch';batch=[];go('new')")
             admin.locator('#batchraw').fill(unknown);admin.evaluate('previewBatch()')

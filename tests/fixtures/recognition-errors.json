@@ -302,6 +302,26 @@
           "运送货物"
         ]
       }
+    },
+    {
+      "id": "REC-016",
+      "problem": "Human-reviewed orders were blocked again after parser upgrades or audit disagreement.",
+      "rootCause": "Review fingerprints included the parser version, and raw machine uncertainty outranked saved manual decisions.",
+      "source": "附加内容已由工作人员确认\n岗位：前台销售接待员\n性别：女\n年龄：40岁以下\n工资：HKD18000\n工作时间：每天9小时\n工作内容：负责接待顾客",
+      "savedRecord": {
+        "id": "legacy-human-review",
+        "status": "ready",
+        "price": "4w",
+        "title": "前台销售接待员",
+        "manualFields": "[\"title\"]",
+        "parsedSnapshot": "{\"title\":\"招聘岗位\"}",
+        "parserVersion": "8"
+      },
+      "expectedReviewed": true,
+      "expected": {
+        "title": "前台销售接待员",
+        "salary": "HKD18000"
+      }
     }
   ]
 }

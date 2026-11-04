@@ -4,6 +4,7 @@
  const labels={title:'职位名称',employer:'雇主',salary:'薪资待遇（月薪）',gender:'招聘性别',age:'年龄要求',hours:'工作时间',workContent:'工作内容'};
  let report=null,auditGeneration=0;
  function inspect(record){
+  if(ZYOrderParser.isHumanReviewed(record))return {id:record.id,code:record.code||'',raw:record.raw||'',candidate:ZYOrderParser.present(record),missing:[],unsupported:[],sources:{},changed:[],warnings:[],conflicts:[],unclassified:[],needsReview:false,humanReviewed:true};
   const analysis=ZYOrderParser.analyze(record.raw||'',record.code||'');
   const candidate=analysis.order?ZYOrderParser.present({...analysis.order,code:record.code,price:record.price}):null;
   const current=ZYOrderParser.present(record),missing=required.filter(key=>!String(candidate?.[key]||'').trim());
@@ -19,7 +20,7 @@
    records.push(inspect(source[i]));if(i%20===19)await new Promise(resolve=>setTimeout(resolve,0));
   }
   if(sessionUser!==owner||run!==auditGeneration)return false;
-  report={format:'zy-order-recognition-audit',version:1,parserVersion:'10',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
+  report={format:'zy-order-recognition-audit',version:1,parserVersion:'11',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
   refreshOrderAuditBadge();return true;
  }
  window.refreshOrderAuditBadge=function(){document.querySelectorAll('[data-order-audit-count]').forEach(element=>element.textContent=report?'('+report.needsReview+'/'+report.total+')':'')};
@@ -33,7 +34,7 @@
  };
  function renderAudit(){
   if(!report||!sessionUser)return;
-  $('#modal').innerHTML=`<h2>原单识别自查</h2><p>逐单比较原单与公司单，不自动修改资料。</p><p><span>单据总数</span> <b data-user-content>${report.total}</b> · <span>需要核对</span> <b data-user-content>${report.needsReview}</b></p><div class="actions"><button onclick="downloadOrderAudit()">下载自查报告（含原单）</button><button onclick="$('#modal').close()">关闭</button></div>${report.records.map((record,index)=>`<details class="recognition-review"><summary><span data-user-content>${esc(record.code||record.id)}</span> · <span>${record.needsReview?'需要核对':'关键字段已识别'}</span></summary>${record.missing.length?`<p><span>未找到明确来源，请核对</span>：${record.missing.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.unsupported.length?`<p><span>缺少可核对来源</span>：${record.unsupported.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.changed.length?`<p><span>与现有公司单不同</span>：${record.changed.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.candidate?`<table class="source-table"><tbody>${required.map(key=>`<tr><th>${labels[key]}</th><td data-user-content>${esc(record.candidate[key]||'—')}</td></tr>`).join('')}</tbody></table>`:''}${record.warnings.map(warning=>`<p>${esc(warning)}</p>`).join('')}<button onclick="openAuditedOrder(${index})">查看转单预览</button></details>`).join('')}`;
+  $('#modal').innerHTML=`<h2>原单识别自查</h2><p>逐单比较原单与公司单，不自动修改资料。</p><p><span>单据总数</span> <b data-user-content>${report.total}</b> · <span>需要核对</span> <b data-user-content>${report.needsReview}</b></p><div class="actions"><button onclick="downloadOrderAudit()">下载自查报告（含原单）</button><button onclick="$('#modal').close()">关闭</button></div>${report.records.map((record,index)=>`<details class="recognition-review"><summary><span data-user-content>${esc(record.code||record.id)}</span> · <span>${record.humanReviewed?'公司单已人工核对':record.needsReview?'需要核对':'关键字段已识别'}</span></summary>${record.missing.length?`<p><span>未找到明确来源，请核对</span>：${record.missing.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.unsupported.length?`<p><span>缺少可核对来源</span>：${record.unsupported.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.changed.length?`<p><span>与现有公司单不同</span>：${record.changed.map(key=>`<span>${labels[key]}</span>`).join('、')}</p>`:''}${record.candidate?`<table class="source-table"><tbody>${required.map(key=>`<tr><th>${labels[key]}</th><td data-user-content>${esc(record.candidate[key]||'—')}</td></tr>`).join('')}</tbody></table>`:''}${record.warnings.map(warning=>`<p>${esc(warning)}</p>`).join('')}<button onclick="openAuditedOrder(${index})">查看转单预览</button></details>`).join('')}`;
  }
  window.openAuditedOrder=async function(index){
   const item=report?.records[index];if(!item||!sessionUser)return;
