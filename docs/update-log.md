@@ -1,3 +1,10 @@
+## Order database date folding
+
+- Group database orders in date sections, newest first, collapsed by default.
+- Display each date and its matching order count; expand dates independently and retain expansion during list refreshes.
+- Preserve job/code search, status/calendar filters, and the daily overview layout.
+- No business records or recognition rules are changed.
+
 # Website Update Log
 
 ## 2026-11-03: Urgent fix for completed human reviews (parser version 11)
