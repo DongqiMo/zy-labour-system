@@ -9,11 +9,15 @@ window.newView=function(){
 };
 function batchPasteMarkup(){return `<h2>01 / 批量粘贴原单</h2><p>多份原单之间使用独立的 ---、“下一单”或“第 N 单”分隔。</p><textarea id="batchraw" class="rawbox" placeholder="在此粘贴多份微信群原单…" oninput="batchInput=this.value">${esc(batchInput)}</textarea><div class="actions"><button class="primary" onclick="previewBatch()">识别并预览</button></div>`}
 window.previewBatch=async function(){
- const raw=await simplify(($('#batchraw')?.value??batchInput).trim());batchInput=raw;
+ const raw=($('#batchraw')?.value??batchInput).trim();batchInput=raw;
  if(!raw)return toast('请先粘贴原单');
- const parts=ZYOrderParser.splitBatchOrders(raw);
- const next=[];
- for(const part of parts){const order=ZYOrderParser.analyze(part,code(next),{explicitBoundary:true}).order;order.salary=ZYOrderParser.formatCompanySalary(order.salary);order.code=ZYOrderParser.companyCode(code(next),order.sourcePrefix);order.price=suggestion(order.salary);const snapshot=JSON.parse(order.parsedSnapshot||'{}');snapshot.code=order.code;snapshot.salary=order.salary;order.parsedSnapshot=JSON.stringify(snapshot);next.push(order)}
+ const parts=ZYOrderParser.splitBatchOrders(raw),next=[];
+ for(const [index,source]of parts.entries()){
+  const part=await simplify(source),analysis=ZYOrderParser.analyze(part,code(next),{explicitBoundary:true}),order=analysis.order;
+  order.salary=ZYOrderParser.formatCompanySalary(order.salary);order.code=ZYOrderParser.companyCode(code(next),order.sourcePrefix);order.price=suggestion(order.salary);
+  const snapshot=JSON.parse(order.parsedSnapshot||'{}');snapshot.code=order.code;snapshot.salary=order.salary;order.parsedSnapshot=JSON.stringify(snapshot);
+  const previous=ZYRecognitionArchive.read(batch[index]||{});order.firstRecognition=previous?.source===source?batch[index].firstRecognition:ZYRecognitionArchive.capture(source,order,analysis.warnings);next.push(order);
+ }
  batch=next;activeBatch=0;renderBatch();
 };
 window.renderBatch=function(){
@@ -39,7 +43,7 @@ function selectBatchItem(index){if(index<0||index>=batch.length)return;activeBat
 function removeBatchItem(){batch.splice(activeBatch,1);renderBatch()}
 async function reparseBatchItem(){
  const previous=batch[activeBatch],raw=await simplify($('#batch-item-raw').value.trim());if(!raw)return toast('请先粘贴原单');
- const result=ZYOrderParser.analyze(raw,previous.code,{explicitBoundary:true});if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.salary=ZYOrderParser.formatCompanySalary(parsed.salary);parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=previous.code;parsed.price=suggestion(parsed.salary);batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
+ const result=ZYOrderParser.analyze(raw,previous.code,{explicitBoundary:true});if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.salary=ZYOrderParser.formatCompanySalary(parsed.salary);parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=previous.code;parsed.price=suggestion(parsed.salary);parsed.firstRecognition=previous.firstRecognition||'';batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
 }
 window.saveBatch=async function(){
  if(!batch.length)return toast('没有可保存的原单');

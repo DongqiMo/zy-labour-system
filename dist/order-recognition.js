@@ -43,10 +43,10 @@ function recognitionFeedback(messages,multi=false,order=null){
 }
 function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||''}
 window.autoParse=async function(){
- const input=await simplify($('#raw').value.trim());if(!input)return toast('请先粘贴原单');
+ const original=$('#raw').value,input=await simplify(original.trim());if(!input)return toast('请先粘贴原单');
  const result=ZYOrderParser.analyze(input,code());
  if(!result.order){recognitionFeedback(result.warnings,true);return toast(result.warnings[0])}
- const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
+ const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);order.firstRecognition=singleRecognitionMeta?.firstRecognition||(!editing?ZYRecognitionArchive.capture(original,order,result.warnings):'');singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
  recognitionFeedback(result.warnings,false,order);toast('整理完成，请核对各项信息');
 };
 function moveSourceToBatch(){batchInput=ZYOrderParser.splitOrders($('#raw').value).join('\n---\n');batch=[];editing=null;mode='batch';newView();previewBatch()}
@@ -55,14 +55,14 @@ async function reparseExistingOrder(){
  if(!result.order){recognitionFeedback(result.warnings,true);return}
  const old=orders.find(o=>o.id===editing),fresh=result.order;
  fresh.sourcePrefix=fresh.sourcePrefix||old?.sourcePrefix||$('#o-code').value.match(/ ([A-Z]+)$/)?.[1]||'';
- fresh.code=$('#o-code').value.trim();fresh.price=$('#o-price').value;
+ fresh.firstRecognition=old?.firstRecognition||singleRecognitionMeta?.firstRecognition||'';fresh.code=$('#o-code').value.trim();fresh.price=$('#o-price').value;
  singleRecognitionMeta=fresh;fillRecognisedFields(fresh);recognitionFeedback(['已生成重新识别预览，核对后保存才会修改公司单',...result.warnings],false,fresh);
 }
 function recognitionMetadata(order,meta){
  if(!meta)return {};
  let previous={};try{previous=JSON.parse(meta.parsedSnapshot||'{}')}catch{}
  const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String((key==='salary'?ZYOrderParser.formatCompanySalary(previous[key]):previous[key])??''));
- return {boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
+ return {firstRecognition:meta.firstRecognition||'',boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
 }
 window.saveOrder=async function(){
  const data=read(orderFields),input=$('#raw').value.trim();
@@ -75,7 +75,7 @@ window.saveOrder=async function(){
  const problems=ZYOrderParser.validateCompany(candidate,!!editing);if(problems.length){recognitionFeedback(problems,ZYOrderParser.splitOrders(input).length>1);return toast(problems[0])}
  if(orders.some(o=>o.id!==editing&&ZYOrderParser.baseCode(o.code)===ZYOrderParser.baseCode(candidate.code)))return toast('公司单号已存在，请修改');
  const baseline=singleRecognitionMeta?.parsedSnapshot&&ZYOrderParser.sanitizeRaw(singleRecognitionMeta.raw||'')===ZYOrderParser.sanitizeRaw(input)?singleRecognitionMeta:ZYOrderParser.parse(input,candidate.code);
- const metadata=recognitionMetadata(candidate,{...baseline,reviewConfirmation:singleRecognitionMeta?.reviewConfirmation||''});
+ const metadata=recognitionMetadata(candidate,{...baseline,firstRecognition:oldRecord?.firstRecognition||singleRecognitionMeta?.firstRecognition||'',reviewConfirmation:singleRecognitionMeta?.reviewConfirmation||''});
  if(editing||ZYOrderParser.hasReviewConfirmation({...candidate,...metadata})||ZYOrderParser.isHumanReviewed(oldRecord||{}))Object.assign(metadata,ZYOrderParser.humanReviewMetadata(candidate,sessionUser?.username));
  const before=orders;
  if(editing)orders=orders.map(o=>o.id===editing?{...o,...candidate,...metadata,status:status(candidate.price)}:o);

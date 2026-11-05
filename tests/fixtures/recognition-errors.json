@@ -415,6 +415,166 @@
         "title": "接待协调专岗",
         "salary": "HKD21000"
       }
+    },
+    {
+      "id": "REC-023",
+      "problem": "Clock ranges contaminated age and produced unsupported gender warnings.",
+      "rootCause": "An age range did not require an age unit and married-gender prefixes were not recognised consistently.",
+      "source": "【职位】送货员\n【要求】44岁以下，已婚男士。广东话（流利）\n【工作时间】每天9小时，08:00-18:00（含休息）\n【工资】HK18880\n【工作内容】交货及点货",
+      "expected": {
+        "title": "送货员",
+        "gender": "男",
+        "age": "44岁以下"
+      },
+      "contains": {
+        "hours": [
+          "08:00-18:00"
+        ],
+        "language": [
+          "广东话"
+        ]
+      }
+    },
+    {
+      "id": "REC-024",
+      "problem": "Known business labels and establishment types were missing.",
+      "rootCause": "Work-position, hiring-requirement, accommodation and contract aliases did not share the standard field map.",
+      "source": "海岸测试金铺加工店\n【工作岗位】溶金师傅\n【岗位要求】女，47岁以下\n【月    薪】HK16660\n【食宿情况】包住包吃不扣\n【合同期数】24个月",
+      "expected": {
+        "title": "溶金师傅",
+        "employer": "海岸测试金铺加工店",
+        "gender": "女",
+        "age": "47岁以下"
+      },
+      "contains": {
+        "notes": [
+          "包住包吃不扣",
+          "24个月"
+        ]
+      }
+    },
+    {
+      "id": "REC-025",
+      "problem": "A requirements paragraph mistyped as position caused a false title conflict.",
+      "rootCause": "Explicit labels were accepted without checking whether their value was an experience description.",
+      "source": "[职位]珠宝售货员\n[职位]有多年的珠宝经验。有店长管理经验优先。\n1.负责店铺销售\n2.入单及收银\n[工资]HK18880\n[性别]男",
+      "expected": {
+        "title": "珠宝售货员"
+      },
+      "contains": {
+        "requirements": [
+          "有多年的珠宝经验",
+          "有店长管理经验优先"
+        ],
+        "workContent": [
+          "负责店铺销售",
+          "入单及收银"
+        ]
+      }
+    },
+    {
+      "id": "REC-026",
+      "problem": "Invisible controls broke age restrictions and salary ranges.",
+      "rootCause": "Recognition did not normalise extraction/PDF control characters independently of the archived original.",
+      "source": "【岗位】见习厨师\n【要求】37\u0002岁以下男性\n【工资薪酬】14550\u0002至\u000216240\n【工作时间】每周\u00026\u0002天，每天\u00028\u0002小时\n【食宿安排】提供宿舍扣\u000210%\n劳务服务费+办证费+保险",
+      "expected": {
+        "title": "见习厨师",
+        "gender": "男",
+        "age": "37 岁以下",
+        "salary": "HKD14550至16240"
+      },
+      "contains": {
+        "hours": [
+          "8 小时"
+        ],
+        "notes": [
+          "10%"
+        ]
+      },
+      "forbidden": [
+        "\u0002",
+        "劳务服务费",
+        "办证费",
+        "保险"
+      ]
+    },
+    {
+      "id": "REC-027",
+      "problem": "Accommodation deductions mentioning base pay were moved into salary.",
+      "rootCause": "Compensation keywords were matched before broader employee-deduction context.",
+      "source": "岗位：货仓管理员\n工资：HK18000，津贴500，年尾花红\n食宿：住公司统一安排，最高扣底薪20%\n性别：男\n劳务服务费+办证费+保险",
+      "expected": {
+        "title": "货仓管理员"
+      },
+      "contains": {
+        "salary": [
+          "HKD18000",
+          "津贴500",
+          "年尾花红"
+        ],
+        "notes": [
+          "扣底薪20%"
+        ]
+      },
+      "forbidden": [
+        "劳务服务费",
+        "办证费",
+        "保险"
+      ]
+    },
+    {
+      "id": "REC-028",
+      "problem": "Flags and chat decorations leaked into position names.",
+      "rootCause": "Decorations were not separated from literal job text before identifying the wage heading.",
+      "source": "SOURCE-20996666🇭🇰清洁工HK14440+\n男，54岁内\n工作内容：整理货架[红包][烟花]\n工作时间：10H，轮班",
+      "expected": {
+        "title": "清洁工",
+        "salary": "HKD14440+"
+      },
+      "forbidden": [
+        "🇭🇰",
+        "红包",
+        "烟花"
+      ]
+    },
+    {
+      "id": "REC-029",
+      "problem": "A closing-only work-content label left duties inside requirements.",
+      "rootCause": "Only well-formed paired brackets were recognised as field labels.",
+      "source": "岗位：侍应生\n工作要求：有相关经验\n工作内容】为客人点餐；收拾餐桌\n工资：HK16660\n性别：女\n工作时间：9小时",
+      "expected": {
+        "title": "侍应生"
+      },
+      "contains": {
+        "workContent": [
+          "为客人点餐",
+          "收拾餐桌"
+        ],
+        "requirements": [
+          "有相关经验"
+        ]
+      }
+    },
+    {
+      "id": "REC-030",
+      "problem": "A combined schedule/age line lost age, and duty-like tasks remained trapped in requirements.",
+      "rootCause": "First-match scheduling consumed the whole clause and paragraph scope overrode explicit operational task cues.",
+      "source": "岗位：送货司机\n工资：HK21000\n工作时间：6天9小时 49岁内\n要求：男，3年以上经验，送货，上货落货，收货款送回公司",
+      "expected": {
+        "title": "送货司机",
+        "age": "49岁内",
+        "gender": "男"
+      },
+      "contains": {
+        "workContent": [
+          "送货",
+          "上货落货",
+          "收货款送回公司"
+        ],
+        "hours": [
+          "6天9小时"
+        ]
+      }
     }
   ]
 }

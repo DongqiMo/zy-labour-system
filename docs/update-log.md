@@ -1,3 +1,14 @@
+## Audit-derived recognition fixes and first-machine archives (parser v14)
+
+- Fixed clock ranges being treated as ages; retained spaced/approximate age qualifiers and ages embedded in schedules.
+- Added missing position/requirements/accommodation/contract labels, closing-only field brackets, and named establishment types. Experience descriptions mistyped as positions no longer create false title conflicts.
+- Normalised invisible extraction controls on the recognition copy, preserving archived source/review fingerprints and full salary ranges. Removed flag/chat decorations from company fields.
+- Kept employee deductions mentioning base pay in notes, retained earnings components, and removed standalone upstream-fee headings without requiring an amount. Preserved operational duties and prevented generic disclaimers from leaking into duties/hours.
+- Added immutable-in-workflow first machine snapshots before form edits. Snapshots persist with successful single/batch business saves and remain unchanged by human edits or re-recognition.
+- Audit downloads now export original source plus first machine fields only. Legacy gaps are labelled, never reconstructed; final human company fields are excluded from sample exports and no longer compared as recognition errors.
+- Added REC-023–030, first-only export/persistence checks, source-tracked demographic checks, and PostgreSQL/SQLite portable snapshot coverage. No production records are rewritten and no private source documents are committed.
+- Unsaved abandoned drafts require a separate backend archive endpoint and are not covered by persistence-on-save.
+
 ## Collapsed calendar and today's date indicator
 
 - The database date finder starts collapsed each time the page is entered.

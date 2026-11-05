@@ -17,7 +17,7 @@ async function rejects(action,pattern){await assert.rejects(action,pattern)}
 await login('', 'anon');await rejects(()=>rpc('zy_orders_get'),/permission denied/);
 await login(outsider);await rejects(()=>rpc('zy_orders_get'),/账号未获/);
 await login(staff);await rejects(()=>db.query('select * from zy_private.members'),/permission denied/);await rejects(()=>rpc('zy_export'),/权限不足/);await rejects(()=>rpc('zy_member_add',outsider,'other@example.test','admin'),/权限不足/);
-const order={id:'shared-order',code:'ZY-26-1102-01',title:'共享厨师',salary:'HKD 18,799',raw:'【职位】共享厨师\nDJ: 90000\n80000',createdAt:'2026-11-02T15:00:00Z',price:'3.8w',status:'ready'};
+const order={firstRecognition:JSON.stringify({format:'zy-first-recognition',version:1,source:'测试原单',company:{title:'机器首版职位',salary:'HKD18799'}}),id:'shared-order',code:'ZY-26-1102-01',title:'共享厨师',salary:'HKD 18,799',raw:'【职位】共享厨师\nDJ: 90000\n80000',createdAt:'2026-11-02T15:00:00Z',price:'3.8w',status:'ready'};
 assert.deepEqual(await rpc('zy_orders_save',[order],0),{revision:1});
 await login(owner);assert.deepEqual((await rpc('zy_orders_get')).orders,[order]);
 await rejects(()=>rpc('zy_orders_save',[],0),/其他人已修改/);

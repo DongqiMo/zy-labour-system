@@ -122,6 +122,8 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('#batchraw').fill('AT-1234\n招聘岗位：厨师：2名\n月薪：HKD 18,000\n---\nAT-5678\n招聘岗位：司机：3名\n月薪：HKD 17,000')
             admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
+            import json
+            frozen_batch=admin.evaluate('batch.map(o=>o.firstRecognition)')
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
             assert admin.locator('#batch-fields input,#batch-fields textarea,#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
@@ -158,6 +160,9 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('orders[0].requirements')=='批量备注：工作要求'
             assert admin.evaluate('orders[0].interview')=='现场面试'
             assert admin.evaluate('orders[1].price')=='4.6w'
+            assert admin.evaluate('orders.slice(0,2).map(o=>o.firstRecognition)')==frozen_batch
+            assert json.loads(frozen_batch[0])['company']['gender']==''
+            assert json.loads(frozen_batch[0])['company']['salary']=='HKD18000'
             assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
             admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
@@ -246,7 +251,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='13'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='14'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
@@ -287,6 +292,26 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch[0].employer')=='香港某物流公司'
             assert admin.evaluate('batch[1].employer')==''
             admin.evaluate("batch=[];editing=null;go('orders')")
+            # Freeze first machine fields before manual changes; persist and share that exact private snapshot.
+            archive_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-024')
+            admin.evaluate("editing=null;mode='single';go('new')")
+            admin.locator('#raw').fill(archive_source);admin.evaluate('autoParse()')
+            frozen=admin.evaluate('singleRecognitionMeta.firstRecognition')
+            assert json.loads(frozen)['source']==archive_source
+            assert json.loads(frozen)['company']['title']=='溶金师傅'
+            admin.locator('#o-title').fill('人工核对职位')
+            admin.locator('#o-salary').fill('HKD29999')
+            admin.locator('#o-price').fill('4w');admin.evaluate('saveOrder()')
+            admin.wait_for_selector('.card',state='attached')
+            archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")
+            assert archive_record['firstRecognition']==frozen
+            assert admin.evaluate("o=>publish(o)",archive_record).find('firstRecognition')==-1
+            admin.evaluate("id=>editOrder(id)",archive_record['id']);admin.evaluate('reparseExistingOrder()')
+            assert admin.evaluate('singleRecognitionMeta.firstRecognition')==frozen
+            admin.locator('#o-title').fill('人工核对职位二')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            assert admin.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id).firstRecognition)",archive_record['id'])==frozen
+            assert staff.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id).firstRecognition)",archive_record['id'])==frozen
             # Saving/cancelling an edit returns to its originating order list and preserves filters.
             nav_order=admin.evaluate("orders.find(o=>day(o.createdAt)===today()&&o.title&&o.salary&&o.gender)")
             assert nav_order
@@ -355,8 +380,13 @@ with tempfile.TemporaryDirectory() as tmp:
             with admin.expect_download() as download:
                 admin.evaluate('downloadOrderAudit()')
             audit=json.loads(Path(download.value.path()).read_text())
-            assert audit['total']==len(original['orders']) and all('sources' in record for record in audit['records'])
-            assert all('shift' not in (record['candidate'] or {}) for record in audit['records'])
+            assert audit['format']=='zy-first-recognition-archive' and audit['total']==len(original['orders'])
+            assert audit['captured']>0 and audit['notRecorded']>0
+            archived=next(record for record in audit['records'] if record['id']==archive_record['id'])
+            assert archived['company']['title']=='溶金师傅' and archived['source']==archive_source
+            assert '人工核对职位二' not in json.dumps(audit,ensure_ascii=False)
+            assert all(record['company'] is None for record in audit['records'] if record['status']=='not_recorded')
+            assert all('shift' not in (record['company'] or {}) for record in audit['records'])
             admin.evaluate('openAuditedOrder(0)')
             assert admin.locator('#o-shift').count()==0
             assert admin.evaluate("api('/api/orders')")==original,'Audit preview must not write changes'

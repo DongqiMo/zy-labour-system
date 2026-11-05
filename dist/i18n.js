@@ -34,6 +34,8 @@
  ['简体转换库未加载，原文暂按输入保存，请核对繁体字段','Text conversion is unavailable. The entered source is retained; check traditional Chinese fields.'],['本浏览器没有可导入的旧资料（示例订单不导入）','No legacy records to import; example orders are excluded'],['旧订单格式异常，未上传','Invalid legacy order format; nothing uploaded'],['旧劳工资料无法读取，未上传','Cannot read legacy worker records; nothing uploaded']
 ,
  ["检测到多份原单，请使用批量录入或拆分后处理", "Multiple source orders detected. Use batch entry or split the source first."],
+ ["检查原单识别结果，不比较或修改人工公司单。", "Check source recognition without comparing or modifying human-edited company orders."],
+ ["未找到明确原文依据", "No clear source evidence found"],
  ["识别到多个雇主名称，请人工核对", "Multiple employer names detected. Review them manually."],
  ["识别到多组薪资，请人工核对或拆分原单", "Multiple salary values detected. Review manually or split the source."],
  ["未可靠识别职位，请人工核对", "Job title is uncertain. Review it manually."],

@@ -44,14 +44,14 @@ console.log(`PASS: ${catalog.cases.length} documented error families, 64 compact
 
 const oldShift={hours:'每天9小时',shift:'轮班',salary:'18000',raw:'旧原单'};const shifted=P.present(oldShift);assert.equal(shifted.hours,'每天9小时；轮班');assert(!Object.hasOwn(shifted,'shift'));assert.equal(oldShift.shift,'轮班');assert.equal(P.parse('岗位：司机\n工资：18000\n班次：夜班','ZY-26-1103-90').hours,'夜班');
 // The audit uses private records in memory and does not manufacture absent facts.
-globalThis.window=globalThis;globalThis.loginScreen=()=>{};await import('../dist/order-audit.js');
-const sourceCase=catalog.cases.find(c=>c.id==='REC-013');const audit=ZYOrderAudit.inspect({id:'audit-synthetic',code:'ZY-26-1103-90 CV',raw:sourceCase.source,salary:'1',title:'旧职位'});assert(audit.missing.includes('workContent'));assert.equal(audit.candidate.workContent,'');assert.equal(audit.candidate.salary,'HKD14260+');assert(!audit.unsupported.length);assert(audit.changed.includes('salary'));assert(audit.sources.salary.length);
+globalThis.window=globalThis;globalThis.loginScreen=()=>{};await import('../dist/recognition-archive.js');await import('../dist/order-audit.js');
+const sourceCase=catalog.cases.find(c=>c.id==='REC-013');const audit=ZYOrderAudit.inspect({id:'audit-synthetic',code:'ZY-26-1103-90 CV',raw:sourceCase.source,salary:'1',title:'旧职位'});assert(audit.notProvided.includes('workContent'));assert.equal(audit.candidate.workContent,'');assert.equal(audit.candidate.salary,'HKD14260+');assert(!audit.unsupported.length);assert.deepEqual(audit.changed,[]);assert(audit.sources.salary.length);
 console.log('PASS: shift merged into hours, read-only self-audit, field provenance and no invented duties');
 
 // Human confirmation is durable across parser releases and overrides machine disagreement.
 const reviewedSource=catalog.cases.find(c=>c.id==='REC-005').source;
 const manualRecord={...P.parse(reviewedSource,'ZY-26-1103-90'),id:'manual-reviewed',status:'ready',price:'4w',title:'人工确认的厨师',employer:'人工确认的雇主',reviewConfirmation:'8-54-8fc57fbe'};
-assert(P.isHumanReviewed(manualRecord));assert.deepEqual(P.validateCompany(manualRecord,true),[]);assert.equal(ZYOrderAudit.inspect(manualRecord).needsReview,false);assert.equal(ZYOrderAudit.inspect(manualRecord).candidate.title,'人工确认的厨师');
+assert(P.isHumanReviewed(manualRecord));assert.deepEqual(P.validateCompany(manualRecord,true),[]);assert.equal(ZYOrderAudit.inspect(manualRecord).needsReview,false);assert.equal(ZYOrderAudit.inspect(manualRecord).candidate,null);
 const stamp=P.humanReviewMetadata(manualRecord,'test-owner');assert.equal(stamp.humanReviewedSource,P.reviewSignature(reviewedSource));
 assert(P.isHumanReviewed({...manualRecord,...stamp,parserVersion:'future-version'}));
 assert(!P.isHumanReviewed({...manualRecord,...stamp,raw:'changed source\n'+reviewedSource}));
@@ -101,3 +101,14 @@ assert.equal(P.parse('岗位：招聘专员\n工资：HK21000').title,'招聘专
 
 for(const title of ['餐厅服务员','酒店前台','美容中心接待专岗']){const o=P.parse(title+'\n工资：HK21000');assert.equal(o.title,title);assert.equal(o.employer,'');}
 for(const employer of ['海岸诊所','海岸医院','海岸商行','海岸会所']){const o=P.parse(employer+'\n工序协调专岗HK21000');assert.equal(o.employer,employer);assert.equal(o.title,'工序协调专岗');}
+
+// First machine snapshots are independent of current human fields and are not reconstructed for legacy orders.
+const archiveSource='ORIGIN-20997777【岗位】资料录入专岗\n【工资】HK18880\n【性别】女';
+const firstOrder=P.parse(archiveSource,'ZY-26-1103-90');firstOrder.price='4w';const firstRecognition=ZYRecognitionArchive.capture(archiveSource,firstOrder);
+const first=JSON.parse(firstRecognition);assert.equal(first.source,archiveSource);assert.equal(first.company.title,'资料录入专岗');assert.equal(first.company.salary,'HKD18880');
+const editedArchive={...firstOrder,firstRecognition,title:'人工修改的职位',salary:'HKD29999',notes:'仅限业务的人工内容',price:'9w'};
+const archiveReport=ZYRecognitionArchive.report([editedArchive,{id:'old',raw:'旧原单',title:'人工旧职位',salary:'HKD39999'}]);
+assert.equal(archiveReport.captured,1);assert.equal(archiveReport.notRecorded,1);assert.equal(archiveReport.records[0].company.title,first.company.title);assert.equal(archiveReport.records[1].company,null);
+assert(!JSON.stringify(archiveReport).includes('人工修改的职位'));assert(!JSON.stringify(archiveReport).includes('29999'));assert(!JSON.stringify(archiveReport).includes('仅限业务的人工内容'));assert(!JSON.stringify(archiveReport).includes('人工旧职位'));assert.equal(editedArchive.firstRecognition,firstRecognition);
+for(const fixture of catalog.cases.filter(f=>['REC-023','REC-024','REC-025','REC-026','REC-030'].includes(f.id))){const r=P.analyze(fixture.source,'ZY-26-1103-90');assert(!r.warnings.some(w=>w.includes('性别不明确')));assert(r.sources.gender?.length);if(r.order.age)assert(r.sources.age?.length);}
+console.log('PASS: report-derived regressions, source-tracked demographics and first-machine-only export with legacy gaps');
