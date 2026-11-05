@@ -1,0 +1,10 @@
+# Isolated experiment only; install a platform-appropriate PyTorch separately.
+# Imports checked with Python 3.12 + torch 2.5.1+cpu. Full inference still requires model weights.
+numpy==1.26.4
+transformers==4.40.2
+sentencepiece==0.2.1
+protobuf==4.25.8
+colorlog==6.12.0
+colorama==0.4.6
+six==1.17.0
+requests==2.34.2
