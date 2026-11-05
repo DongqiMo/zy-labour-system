@@ -21,6 +21,7 @@ globalThis.fetch=async(url,opts)=>{const path=new URL(url).pathname,body=opts.bo
  if(path==='/rest/v1/rpc/zy_import'){assert.equal(body.p_payload.version,1);return response({orders:0,workers:0,revision:1})}
  if(path==='/rest/v1/rpc/zy_maintenance_set'){assert.equal(body.p_read_only,true);return response({readOnly:true})}
  if(path==='/rest/v1/rpc/zy_member_disable'){assert.equal(body.p_id,'staff-one');return response({ok:true})}
+ if(path==='/functions/v1/recognize-order'){assert.equal(opts.headers.Authorization,'Bearer refreshed-jwt');return response(body.action==='status'?{enabled:true}:{provider:'gemini',model:'gemini-test',facts:[]})}
  if(path==='/functions/v1/team-admin'){assert.deepEqual(body,{action:'create',email:'staff@example.test',password:'safe-test-password',role:'staff'});return response({ok:true},201)}
  throw new Error('Unexpected request '+path);
 };
@@ -28,6 +29,8 @@ await assert.rejects(()=>adapter.call('/api/session'),e=>e.status===401);
 const session=await adapter.call('/api/login',{method:'POST',body:{username:'owner@example.test',password:'safe-test-password'}});assert.equal(session.user.role,'admin');
 assert.deepEqual(requests[0].body,{email:'owner@example.test',password:'safe-test-password'});
 adapter.session.expires_at=0;await Promise.all([adapter.call('/api/orders'),adapter.call('/api/workers')]);assert.equal(refreshCount,1);
+assert.equal((await adapter.call('/api/recognition-status',{method:'POST'})).enabled,true);
+assert.equal((await adapter.call('/api/recognize-order',{method:'POST',body:{source:'测试原单'}})).provider,'gemini');
 await adapter.call('/api/orders',{method:'PUT',body:{orders:[],revision:0}});
 const backup=await adapter.call('/api/export');await adapter.call('/api/import',{method:'POST',body:{payload:backup,revision:0}});
 await adapter.call('/api/maintenance',{method:'POST',body:{readOnly:true}});

@@ -61,3 +61,7 @@ Local PostgreSQL permission/migration tests do not establish hosted Auth, Edge F
 `npm run start:static` serves the static frontend. An unconfigured cloud connection shows a connection warning; saving never silently falls back to browser storage. Configure only public values in `dist/config.js`, or set the environment variables and run `python3 scripts/configure_static.py`.
 
 See the README for local HTTP/production HTTPS and full SQLite backups, and the [database migration guide](database-migration.md) for portable business data.
+
+## Optional Gemini assistance
+
+See [Gemini setup](gemini-setup.md) for the separate private quota migration, Edge Function deployment and server secrets. Pages publication alone does not enable AI. Never add `GEMINI_API_KEY` to public repository variables or frontend config.

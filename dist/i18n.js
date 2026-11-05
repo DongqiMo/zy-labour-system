@@ -34,6 +34,9 @@
  ['简体转换库未加载，原文暂按输入保存，请核对繁体字段','Text conversion is unavailable. The entered source is retained; check traditional Chinese fields.'],['本浏览器没有可导入的旧资料（示例订单不导入）','No legacy records to import; example orders are excluded'],['旧订单格式异常，未上传','Invalid legacy order format; nothing uploaded'],['旧劳工资料无法读取，未上传','Cannot read legacy worker records; nothing uploaded']
 ,
  ["检测到多份原单，请使用批量录入或拆分后处理", "Multiple source orders detected. Use batch entry or split the source first."],
+ ["表单已修改，未覆盖人工内容", "The form changed. Human edits were retained."],
+ ["AI与规则结果有差异，请核对原文", "AI and rule results differ. Review the source."],
+ ["AI暂不可用，已保留规则识别结果", "AI is unavailable. Rule recognition has been retained."],
  ["检查原单识别结果，不比较或修改人工公司单。", "Check source recognition without comparing or modifying human-edited company orders."],
  ["未找到明确原文依据", "No clear source evidence found"],
  ["识别到多个雇主名称，请人工核对", "Multiple employer names detected. Review them manually."],

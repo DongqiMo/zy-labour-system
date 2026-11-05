@@ -4,7 +4,7 @@ This is the durable implementation contract. It describes the current shared sys
 
 ## Pipeline and ownership
 
-The sole recognition engine is `dist/order-parser.js`. Single entry, batch entry, re-recognition previews, source review, and publication validation call this engine. It is a deterministic, offline-capable JavaScript rule engine, not an externally trained model or an autonomous learning service. Improvements are deliberate code/rule changes tested against the catalog. Do not send source orders to external AI services without a separately authorized integration.
+The shared deterministic rule engine is `dist/order-parser.js`. Single entry, batch entry, re-recognition previews, source review, and publication validation call this engine. It is a deterministic, offline-capable JavaScript rule engine, not an externally trained model or an autonomous learning service. Improvements are deliberate code/rule changes tested against the catalog. Optional Gemini assistance is separately authorised and documented below; no other external model integration is enabled.
 
 1. In batch entry, staff-provided standalone `---` (or the existing explicit separator aliases) defines each document; never infer additional documents inside a supplied segment. Retain single-entry detection of multiple coherent role/pay blocks as a guard. Boundary metadata is private and retained on save/re-recognition.
 2. Build logical source units and UTF-16 spans, recovering inline and wrapped labels without deleting unknown text.
@@ -108,3 +108,11 @@ The existing audit download now produces `zy-first-recognition-archive` version 
 This is capture-on-recognition and persistence-on-business-save. Abandoned unsaved drafts are not durably archived. An independent append-only backend endpoint is required for that separate requirement. No localStorage copy of private order text is created. Deleting a business order removes its associated snapshot from the active dataset; portable business backups retain it. Existing full business backups still contain final business records by design; they are not machine-learning sample exports.
 
 These snapshots are workflow records, not tamper-proof evidence. No unattended AI training, daily job, external delivery, or automatic code deployment is configured by this change. Reports are private and cleared on logout. Do not commit source exports to this public repository.
+
+## Optional Gemini assistance
+
+`dist/ai-recognition.js` calls only the authenticated Supabase transport, never Google directly. The separately deployed `recognize-order` Edge Function requires explicitly enabled model/key secrets, validates active team membership, reserves atomic database quota, redacts recognised contact/identity details and submits only the current job source. The model returns allowlisted literal facts with exact source excerpts; company code and ZY price are never model-controlled.
+
+Assistance fills absent fields. Conflicting populated identity/pay/age values stay unchanged and require review. Source provenance, original rule unknowns, fee filtering, human review and fixed three-value gender remain in force. Late responses do not replace concurrent manual edits. No worker data, background audits, bulk database exports or automatic business writes go to Google. Disabled/missing/unavailable AI retains rules. First-machine snapshots record the actual provider/model and are never rewritten when AI is later enabled.
+
+SQL, transport and model boundaries have mocked tests; live account/model setup and real recognition quality still need verification. See [Gemini setup](gemini-setup.md). No automatic learning or autonomous rule deployment occurs.

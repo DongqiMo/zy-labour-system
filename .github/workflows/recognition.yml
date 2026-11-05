@@ -5,6 +5,8 @@ on:
     paths:
       - 'dist/**'
       - 'tests/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
       - 'scripts/check.mjs'
       - 'package.json'
       - 'docs/recognition-rules.md'
@@ -14,6 +16,8 @@ on:
     paths:
       - 'dist/**'
       - 'tests/**'
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
       - 'scripts/check.mjs'
       - 'package.json'
       - 'docs/recognition-rules.md'
@@ -32,3 +36,4 @@ jobs:
       # These checks use Node built-ins; no credentials or business data are required.
       - run: npm run check
       - run: npm run test:parser
+      - run: npm run test:transport

@@ -8,6 +8,7 @@ async function api(path,{method='GET',body}={}){
   return data;
 }
 function loginScreen(message=''){
+ window.ZYAI?.reset();
   sessionUser=null;csrf='';orders=[];workers=[];worker={};editing=null;batch=[];
   $('#modal').close();$('#modal').innerHTML='';$('aside').hidden=true;$('main').hidden=true;
   $('#login')?.remove();const box=document.createElement('section');box.id='login';box.style='max-width:440px;margin:12vh auto;padding:30px;background:#fff';

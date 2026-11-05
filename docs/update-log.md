@@ -1,3 +1,12 @@
+## Optional Gemini assistance (rule parser v15)
+
+- Added a separately enabled Supabase Edge Function with active-member Auth checks, CORS, a fixed structured extraction prompt/schema, literal source validation, contact/identity masking and server-only key handling.
+- Added private atomic reservations: 20 calls per member/day, 100 team/day and two-second member cooldown; maintenance and disabled membership prevent calls. No source text or API keys enter counter tables.
+- Integrated optional assistance into explicit single/batch/re-recognition actions. Rules remain available when AI is absent, disabled, exhausted or unavailable. No Google requests occur on background audits or worker forms.
+- Gemini fills missing fields and flags differences while preserving populated values, company code, independent ZY price and manual edits. Pending responses cannot overwrite forms changed during the request.
+- First recognition snapshots record the actual provider/model. API secrets and hosted activation remain a separate owner setup; Pages deployment does not enable the external service.
+- Added mocked Gemini, transport, literal extraction, quota/permissions and pending-response browser checks. Real Google calls are not claimed as tested.
+
 ## Audit-derived recognition fixes and first-machine archives (parser v14)
 
 - Fixed clock ranges being treated as ages; retained spaced/approximate age qualifiers and ages embedded in schedules.

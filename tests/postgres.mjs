@@ -8,6 +8,7 @@ process.on('uncaughtException',e=>{console.error(e.message,e.where||'');process.
 const db=new PGlite();
 await db.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema public,auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;`);
 await db.exec(readFileSync(new URL('../supabase/migrations/202611030001_zy_shared.sql',import.meta.url),'utf8'));
+await db.exec(readFileSync(new URL('../supabase/migrations/202611050001_gemini_quota.sql',import.meta.url),'utf8'));
 const owner='10000000-0000-0000-0000-000000000001',staff='10000000-0000-0000-0000-000000000002',outsider='10000000-0000-0000-0000-000000000003';
 await db.query('insert into auth.users values ($1),($2),($3)',[owner,staff,outsider]);
 await db.query("insert into zy_private.members values($1,'owner@example.test','admin',true),($2,'staff@example.test','staff',true)",[owner,staff]);
@@ -49,6 +50,17 @@ assert.equal((await rpc('zy_orders_get')).orders.length,0);assert.equal((await r
 await rejects(()=>rpc('zy_import',backup,1),/已变化/);
 assert.deepEqual(await rpc('zy_import',backup,2),{orders:1,workers:1,revision:3});
 const restored=await rpc('zy_export');assert.deepEqual(restored.orders,backup.orders);assert.deepEqual(restored.workers,backup.workers);
-await rpc('zy_member_disable',staff);await login(staff);await rejects(()=>rpc('zy_orders_get'),/账号未获/);
+// AI reservations are private, live-member checked and atomically capped before paid requests.
+await login('', 'anon');await rejects(()=>rpc('zy_ai_reserve'),/permission denied/);
+await login(outsider);await rejects(()=>rpc('zy_ai_reserve'),/账号未获/);
+await login(staff);assert.equal((await rpc('zy_ai_reserve')).ok,true);await rejects(()=>rpc('zy_ai_reserve'),/调用上限/);
+await rejects(()=>db.query('select * from zy_private.ai_daily_usage'),/permission denied/);
+await db.exec('reset role');await db.exec("update zy_private.ai_member_usage set calls=20,last_call='-infinity'");
+await login(staff);await rejects(()=>rpc('zy_ai_reserve'),/调用上限/);
+await db.exec('reset role');await db.exec('update zy_private.ai_daily_usage set calls=100');
+await login(owner);await rejects(()=>rpc('zy_ai_reserve'),/调用上限/);
+await db.exec('reset role');await db.exec('delete from zy_private.ai_member_usage;delete from zy_private.ai_daily_usage');
+await login(owner);await rpc('zy_maintenance_set',true);await rejects(()=>rpc('zy_ai_reserve'),/暂停|只读/);await rpc('zy_maintenance_set',false);
+await rpc('zy_member_disable',staff);await login(staff);await rejects(()=>rpc('zy_orders_get'),/账号未获/);await rejects(()=>rpc('zy_ai_reserve'),/账号未获/);
 await login(owner);await rejects(()=>rpc('zy_member_disable',owner),/自己的账号/);
 await db.close();console.log('PASS: PostgreSQL SQL, anonymous/outsider/staff/admin permissions, sharing, edit conflicts, immutable raw, snapshot export, atomic empty-target restore, PostgreSQL→SQLite→PostgreSQL images/PDF/history roundtrip, read-only migration mode, disabled membership');

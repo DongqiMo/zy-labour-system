@@ -2,3 +2,7 @@
 # JWT is validated by the project RPC using the caller's bearer token.
 # Supports both publishable keys and newer Auth signing keys.
 verify_jwt = false
+
+[functions.recognize-order]
+# The function validates the actual Bearer JWT through zy_session and zy_ai_reserve.
+verify_jwt = false

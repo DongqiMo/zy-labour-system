@@ -27,6 +27,7 @@ window.ZYSupabase=class {
    try{return await this.rpc('zy_session')}catch(e){try{await this.request('/auth/v1/logout',{method:'POST',token:data.access_token})}catch{}this.save(null);throw e}
   }
   if(path==='/api/logout'){await this.request('/auth/v1/logout',{method:'POST',token:await this.token()});this.save(null);return {ok:true}}
+  if(path==='/api/recognition-status'||path==='/api/recognize-order')return this.request('/functions/v1/recognize-order',{method:'POST',token:await this.token(),body:path==='/api/recognition-status'?{action:'status'}:{action:'recognize',source:body.source}});
   if(path==='/api/session')return this.rpc('zy_session');
   if(path==='/api/orders')return method==='GET'?this.rpc('zy_orders_get'):this.rpc('zy_orders_save',{p_orders:body.orders,p_revision:body.revision});
   if(path==='/api/workers'){

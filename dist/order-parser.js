@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='14';
+ const VERSION='15';
  const recognitionText=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g,' ');
  const stripDecoration=s=>String(s??'').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]/gu,'').replace(/\[(?:红包|紅包|烟花|煙花|玫瑰|庆祝|慶祝|强|強)\]/g,'');
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -453,6 +453,9 @@
   const sources={},warnings=[];
   for(const entry of ledger)if(entry.fields.length)for(const key of entry.fields)(sources[key]??=[]).push(entry.text);
   for(const key of Object.keys(sources))sources[key]=unique(sources[key]);
+  // AI evidence is supplementary, literal and privately stored; it never dismisses unclassified rule spans.
+  let aiWarnings=[];try{aiWarnings=JSON.parse(order.aiWarnings||'[]').filter(w=>typeof w==='string');}catch{}
+  try{for(const fact of JSON.parse(order.aiEvidence||'[]'))if(fact&&typeof fact.value==='string'&&typeof fact.evidence==='string'&&input.includes(fact.evidence)&&fact.evidence.includes(fact.value)&&['title','employer','salary','gender','age','language','hours','rest','interview','workContent','requirements','notes'].includes(fact.field))(sources[fact.field]??=[]).push(fact.evidence);}catch{}
   const unclassified=unique(ledger.filter(entry=>entry.disposition==='review').map(entry=>entry.text));
   const excluded=ledger.filter(entry=>entry.disposition==='excluded');
   const conflicts=ledger.filter(entry=>entry.disposition==='conflict');
@@ -462,10 +465,11 @@
   if(!order.age)warnings.push('未识别年龄要求，请核对原单');
   if(!order.hours)warnings.push('未识别工作时间，请核对原单');
   if(/^休\s*\d+$/.test(String(order.rest||'').trim()))warnings.push('休息周期不明确，请确认是每周还是每月');
+  warnings.push(...aiWarnings);
   if(unclassified.length)warnings.push('部分原单内容尚未分类，请核对未分类内容');
   if(conflicts.some(entry=>entry.fields.includes('employer')))warnings.push('识别到多个雇主名称，请人工核对');
   if(conflicts.some(entry=>entry.fields.includes('salary')))warnings.push('识别到多组薪资，请人工核对或拆分原单');
-  return {warnings:reviewed?[]:unique(warnings),sources,unclassified:reviewed?[]:unclassified,excluded,conflicts:reviewed?[]:conflicts,ledger,reviewed,needsAcknowledgement:!reviewed&&!!(unclassified.length||conflicts.length)};
+  return {warnings:reviewed?[]:unique(warnings),sources,unclassified:reviewed?[]:unclassified,excluded,conflicts:reviewed?[]:conflicts,ledger,reviewed,needsAcknowledgement:!reviewed&&!!(unclassified.length||conflicts.length||aiWarnings.length)};
  }
  function parse(input,code=''){const result=analyze(input,code);return result.order||{raw:sanitizeRaw(input),code,needsSplit:true,title:'',gender:'',salary:''}}
  function sanitizeCompany(order){

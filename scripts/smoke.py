@@ -251,7 +251,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='14'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='15'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
@@ -292,6 +292,14 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch[0].employer')=='香港某物流公司'
             assert admin.evaluate('batch[1].employer')==''
             admin.evaluate("batch=[];editing=null;go('orders')")
+            # Pending AI assistance must never replace human edits made while it is running.
+            admin.evaluate("editing=null;mode='single';go('new');window.originalEnhance=ZYAI.enhance;ZYAI.enhance=analysis=>new Promise(resolve=>window.finishAI=()=>resolve(analysis));void 0")
+            admin.locator('#raw').fill('岗位：测试协调专岗\n性别：女\n工资：HK21000')
+            admin.evaluate('void autoParse()');admin.wait_for_function("typeof window.finishAI==='function'")
+            admin.locator('#o-title').fill('等待期间人工修改')
+            admin.evaluate('finishAI()')
+            assert admin.locator('#o-title').input_value()=='等待期间人工修改'
+            admin.evaluate('ZYAI.enhance=window.originalEnhance;delete window.finishAI')
             # Freeze first machine fields before manual changes; persist and share that exact private snapshot.
             archive_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-024')
             admin.evaluate("editing=null;mode='single';go('new')")

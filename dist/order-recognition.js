@@ -43,15 +43,19 @@ function recognitionFeedback(messages,multi=false,order=null){
 }
 function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||''}
 window.autoParse=async function(){
- const original=$('#raw').value,input=await simplify(original.trim());if(!input)return toast('请先粘贴原单');
- const result=ZYOrderParser.analyze(input,code());
+ const element=$('#raw'),owner=sessionUser,formBefore=JSON.stringify(read(orderFields)),original=element.value,input=await simplify(original.trim());if(!input)return toast('请先粘贴原单');
+ const result=await ZYAI.enhance(ZYOrderParser.analyze(input,code()));
+ if(sessionUser!==owner||$('#raw')!==element)return;
+ if(JSON.stringify(read(orderFields))!==formBefore||element.value!==original)return toast('表单已修改，未覆盖人工内容');
  if(!result.order){recognitionFeedback(result.warnings,true);return toast(result.warnings[0])}
  const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);order.firstRecognition=singleRecognitionMeta?.firstRecognition||(!editing?ZYRecognitionArchive.capture(original,order,result.warnings):'');singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
  recognitionFeedback(result.warnings,false,order);toast('整理完成，请核对各项信息');
 };
 function moveSourceToBatch(){batchInput=ZYOrderParser.splitOrders($('#raw').value).join('\n---\n');batch=[];editing=null;mode='batch';newView();previewBatch()}
 async function reparseExistingOrder(){
- const input=orders.find(o=>o.id===editing)?.raw||$('#raw').value,result=ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:orders.find(o=>o.id===editing)?.boundaryMode==='explicit'});
+ const owner=sessionUser,element=$('#raw'),formBefore=JSON.stringify(read(orderFields)),input=orders.find(o=>o.id===editing)?.raw||element.value,result=await ZYAI.enhance(ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:orders.find(o=>o.id===editing)?.boundaryMode==='explicit'}));
+ if(sessionUser!==owner||$('#raw')!==element)return;
+ if(JSON.stringify(read(orderFields))!==formBefore)return toast('表单已修改，未覆盖人工内容');
  if(!result.order){recognitionFeedback(result.warnings,true);return}
  const old=orders.find(o=>o.id===editing),fresh=result.order;
  fresh.sourcePrefix=fresh.sourcePrefix||old?.sourcePrefix||$('#o-code').value.match(/ ([A-Z]+)$/)?.[1]||'';
@@ -62,7 +66,7 @@ function recognitionMetadata(order,meta){
  if(!meta)return {};
  let previous={};try{previous=JSON.parse(meta.parsedSnapshot||'{}')}catch{}
  const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String((key==='salary'?ZYOrderParser.formatCompanySalary(previous[key]):previous[key])??''));
- return {firstRecognition:meta.firstRecognition||'',boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
+ return {aiProvider:meta.aiProvider||'',aiModel:meta.aiModel||'',aiEvidence:meta.aiEvidence||'',aiWarnings:meta.aiWarnings||'',firstRecognition:meta.firstRecognition||'',boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
 }
 window.saveOrder=async function(){
  const data=read(orderFields),input=$('#raw').value.trim();
