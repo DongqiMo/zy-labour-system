@@ -20,7 +20,7 @@
    records.push(inspect(source[i]));if(i%20===19)await new Promise(resolve=>setTimeout(resolve,0));
   }
   if(sessionUser!==owner||run!==auditGeneration)return false;
-  report={format:'zy-order-recognition-audit',version:1,parserVersion:'11',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
+  report={format:'zy-order-recognition-audit',version:1,parserVersion:'12',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
   refreshOrderAuditBadge();return true;
  }
  window.refreshOrderAuditBadge=function(){document.querySelectorAll('[data-order-audit-count]').forEach(element=>element.textContent=report?'('+report.needsReview+'/'+report.total+')':'')};

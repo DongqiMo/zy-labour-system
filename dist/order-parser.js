@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='11';
+ const VERSION='12';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?!\d+(?:\.\d+)?\s*(?:度|℃|°C))/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -54,7 +54,7 @@
  }
  const generic=/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位(?:名称)?|職位(?:名稱)?|岗位|崗位|工种|工種)$/;
  const editorial=s=>cleanBrackets(sanitizeRaw(s)).replace(/^(?:更新|急单|急單|新增)\s*/,'').trim();
- const jobWords=/(?:师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工|清洁工|清潔工|保洁员|保潔員|搬运工|搬運工|包装工|包裝工|洗碗工|杂工|雜工|售货员|售貨員|店员|店員|理货员|理貨員|收货员|收貨員|内勤|內勤|主管)/;
+ const jobWords=/(?:大车维修|大車維修|汽车维修|汽車維修|车辆维修|車輛維修|机修工|機修工|维修工|維修工|师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工|清洁工|清潔工|保洁员|保潔員|搬运工|搬運工|包装工|包裝工|洗碗工|杂工|雜工|售货员|售貨員|店员|店員|理货员|理貨員|收货员|收貨員|内勤|內勤|主管)/;
  function titleValue(value,explicit=false){
   let text=editorial(value).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
   if(/^[（(]?\s*批文/.test(text))return '';
@@ -233,7 +233,7 @@
  const ageExpression=/(?:\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]?(?:左右)?|\d{2}\s*[岁歲](?:以下|以内|以內|以上|内|內)?)/;
  const hourExpression=/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|[hH](?![A-Za-z]))/;
  const restExpression=/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m;
- const requirementCue=/精通|熟练|熟練|略懂|掌握|具备|具備|经验|經驗|学历|學歷|本科|大专|大專|大学|大學|中专|中專|高中|初中|认识|認識|需有|必须有|必須有|能吃苦|责任心|責任心|服从|服從|年龄|年齡/;
+ const requirementCue=/要识得|要識得|持有|资格证|資格證|证书|證書|精通|熟练|熟練|略懂|掌握|具备|具備|经验|經驗|学历|學歷|本科|大专|大專|大学|大學|中专|中專|高中|初中|认识|認識|需有|必须有|必須有|能吃苦|责任心|責任心|服从|服從|年龄|年齡/;
  const dutyCue=/负责|負責|协助|協助|主要做|能接受|处理|處理|接听|接聽|整理|操作|装卸|裝卸|盘点|盤點|存档|存檔|输入|輸入|影印|报告|報告|送递|送遞|入账|入賬|跟单|跟單|落单|落單|报价单|報價單|接待|收银|收銀|收钱|收錢|切肉|备料|備料|搬运|搬運/;
  const employerCue=/公司|集团|集團|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口|菜市场|菜市場|超市|商场|商場|市场|市場|门店|門店|连锁店|連鎖店/;
  function catalogDocument(raw){
@@ -280,7 +280,7 @@
     if(/面[试試]|试工|試工|(?:需附|附|提供).*(?:视频|視頻)/.test(text)){push('interview',text,'interview_instruction');continue;}
     const role=roleHeader(text);
     if(role&&(!section||section==='title')&&!requirementCue.test(text)&&!dutyCue.test(text)){title(role,1);const g=summaryGender(text);if(g)inferredGenders.push(g);const age=text.match(ageExpression)?.[0];if(age)push('age',age);section='';continue;}
-    if(/食宿|包吃|包食|工作餐|住宿|宿舍|吃自理/.test(text)&&!deductionPattern.test(text)&&!dutyCue.test(text)){push('notes',text,'meal_or_housing_fact');continue;}
+    if(/食宿|包吃|包食|工作餐|住宿|宿舍|吃自理|(?:提供|安排|免费|免費).*住/.test(text)&&!deductionPattern.test(text)&&!dutyCue.test(text)){push('notes',text,'meal_or_housing_fact');continue;}
     if(deductionPattern.test(text)){push('notes',text,'employee_deduction');continue;}
     if(compensationPattern.test(text)||/劳工假|勞工假|年假|福利|(?:满|滿).*(?:月|年)/.test(text)){push('notes',section==='compensation'?componentLabel+'：'+text:text,'pay_or_benefit_condition');continue;}
     if(section==='compensation'&&!unitLabel){push('notes',componentLabel+'：'+text,'component_continuation');continue;}
@@ -412,7 +412,7 @@
   const earnings=pay.salary?notes.filter(part=>compensationPattern.test(part)&&!deductionPattern.test(part)&&!hasUpstreamCharge(part)&&!hasQuote(part)):[];
   if(typeof result.salary==='string')result.salary=unique([pay.salary,...earnings]).join('；');
   result.notes=unique([...notes.filter(part=>!earnings.includes(part)),...pay.notes]).join('；');
-  result.notes=cleanBrackets(result.notes);if(typeof result.code==='string')result.code=cleanBrackets(result.code);if(typeof result.price==='string')result.price=cleanBrackets(result.price);if(result.sourcePrefix)result.code=companyCode(result.code,result.sourcePrefix);
+  result.notes=cleanBrackets(result.notes);if(typeof result.code==='string')result.code=cleanBrackets(result.code);if(typeof result.price==='string')result.price=cleanBrackets(result.price);
   return result;
  }
  function validateCompany(order,forPublication=false){

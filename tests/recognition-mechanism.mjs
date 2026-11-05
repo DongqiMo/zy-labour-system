@@ -59,3 +59,13 @@ const legacyManual={...manualRecord,reviewConfirmation:'',manualFields:'["title"
 const unreviewed={...manualRecord,title:'厨师',reviewConfirmation:'',manualFields:'[]'};assert(!P.isHumanReviewed(unreviewed));assert(P.validateCompany(unreviewed,true).length);
 assert(P.validateCompany({...manualRecord,...stamp,gender:''},true).length);assert(P.validateCompany({...manualRecord,...stamp,notes:'上家全包35000'},true).length);
 console.log('PASS: durable historical review tokens, manual-save precedence, no audit re-warning, changed-source invalidation and retained field/fee checks');
+
+// Supplier provenance is metadata, never authority to rewrite an edited company code.
+const prefixed=P.parse('SUPPLIER-20994444 岗位：司机\n工资：HK18000\n性别：男','ZY-26-1103-90');
+assert.equal(prefixed.code,'ZY-26-1103-90 SUPPLIER');
+for(const code of ['ZY-26-1103-91','ZY-26-1103-91 OTHER']){
+ const edited={...prefixed,code};assert.equal(P.sanitizeCompany(edited).code,code);assert.equal(P.present(edited).code,code);assert.equal(P.present(P.present(edited)).code,code);assert.equal(edited.sourcePrefix,'SUPPLIER');
+}
+for(const title of ['大车维修','汽車維修','机修工','维修工'])for(const currency of ['HK','HK$','HKD']){const o=P.parse(`${title}${currency}24780+\n男，49岁内`);assert.equal(o.title,title);assert.equal(P.present(o).salary,'HKD24780+');}
+assert.equal(P.parse('汽车维修资格证\n岗位：司机\n工资：HK18000').title,'司机');
+console.log('PASS: manual code precedence and vehicle repair/certificate boundaries');

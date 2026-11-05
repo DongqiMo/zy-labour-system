@@ -322,6 +322,35 @@
         "title": "前台销售接待员",
         "salary": "HKD18000"
       }
+    },
+    {
+      "id": "REC-017",
+      "problem": "Compact vehicle repair titles, certificate requirements and provided housing were unclassified.",
+      "rootCause": "Trade vocabulary and semantic qualification/housing cues were incomplete.",
+      "source": "来简历，安排~~~~\n汽修资格证~\nHK大车维修HK24780+\n·49岁内，男，粤语，4年经验\n·10H，休4，24H轮班\n·雇主免费提供住深圳\n·要识得维修货Van及6吨货车，持有车辆机械维修证书\n💰2.79",
+      "expected": {
+        "title": "大车维修",
+        "salary": "HKD24780+",
+        "gender": "男",
+        "age": "49岁内"
+      },
+      "contains": {
+        "requirements": [
+          "要识得维修",
+          "6吨",
+          "机械维修证书"
+        ],
+        "notes": [
+          "雇主免费提供住深圳"
+        ],
+        "hours": [
+          "10H",
+          "24H轮班"
+        ]
+      },
+      "forbidden": [
+        "2.79"
+      ]
     }
   ]
 }

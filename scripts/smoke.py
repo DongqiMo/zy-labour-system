@@ -191,7 +191,8 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate("editOrder('recognition-preview')")
             admin.evaluate('reparseExistingOrder()')
             assert admin.locator('#o-title').input_value()=='砧板师傅'
-            assert admin.locator('#o-code').input_value()=='ZY-26-1103-81 SUPPLIER'
+            assert admin.locator('#o-code').input_value()=='ZY-26-1103-81'
+            admin.locator('#o-code').fill('ZY-26-1103-81 SUPPLIER')
             assert admin.locator('#o-gender').input_value()=='男'
             assert admin.locator('#o-rest').input_value()=='上6休1'
             assert admin.locator('#o-salary').input_value()=='HKD19000；津贴：HKD500'
@@ -205,6 +206,18 @@ with tempfile.TemporaryDirectory() as tmp:
             assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
             assert saved['title']=='砧板师傅' and saved['salary']=='HKD19000；津贴：HKD500' and saved['raw']==source
             assert isinstance(saved['parsedSnapshot'],str) and isinstance(saved['manualFields'],str)
+            # Manual removal/replacement of supplier suffix survives save, reload, and re-recognition.
+            admin.evaluate("editOrder(orders.find(o=>o.code==='ZY-26-1103-81 SUPPLIER').id)")
+            admin.locator('#o-code').fill('ZY-26-1103-81')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            saved=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.code==='ZY-26-1103-81'))")
+            assert saved and saved['sourcePrefix']=='SUPPLIER'
+            assert admin.evaluate('o=>publish(o)',saved).startswith('ZY-26-1103-81｜')
+            admin.evaluate("editOrder(orders.find(o=>o.code==='ZY-26-1103-81').id);reparseExistingOrder()")
+            assert admin.locator('#o-code').input_value()=='ZY-26-1103-81'
+            admin.locator('#o-code').fill('ZY-26-1103-81 OTHER');admin.evaluate('saveOrder()')
+            admin.wait_for_selector('.card',state='attached')
+            assert admin.evaluate("api('/api/orders').then(r=>r.orders.some(o=>o.code==='ZY-26-1103-81 OTHER'))")
             # Shared v8 mechanism: whole-source review, internal exclusions and explicit publication acknowledgement.
             import json
             mechanism_cases=json.loads((Path(__file__).resolve().parents[1]/'tests/fixtures/recognition-errors.json').read_text())['cases']
@@ -233,7 +246,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='11'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='12'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])

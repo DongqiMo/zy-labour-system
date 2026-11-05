@@ -39,7 +39,7 @@ function selectBatchItem(index){if(index<0||index>=batch.length)return;activeBat
 function removeBatchItem(){batch.splice(activeBatch,1);renderBatch()}
 async function reparseBatchItem(){
  const previous=batch[activeBatch],raw=await simplify($('#batch-item-raw').value.trim());if(!raw)return toast('请先粘贴原单');
- const result=ZYOrderParser.analyze(raw,previous.code);if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.salary=ZYOrderParser.formatCompanySalary(parsed.salary);parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=ZYOrderParser.companyCode(previous.code,parsed.sourcePrefix);parsed.price=suggestion(parsed.salary);batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
+ const result=ZYOrderParser.analyze(raw,previous.code);if(!result.order)return toast(result.warnings[0]);const parsed=result.order;parsed.salary=ZYOrderParser.formatCompanySalary(parsed.salary);parsed.sourcePrefix=parsed.sourcePrefix||previous.sourcePrefix||'';parsed.code=previous.code;parsed.price=suggestion(parsed.salary);batch[activeBatch]=parsed;renderBatch();toast('整理完成，请核对各项信息');
 }
 window.saveBatch=async function(){
  if(!batch.length)return toast('没有可保存的原单');

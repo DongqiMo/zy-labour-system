@@ -33,7 +33,7 @@ The ledger records how text was handled; it is not a guarantee of semantic corre
 
 - Prefer explicit labels and their paragraph scope over unlabeled guesses. A role heading may contain an attached salary, so extracting the title must not consume or erase its wage.
 - Position excludes source IDs, wages, trailing salary plus signs, headcount, age/gender/language qualifiers, approval-only job names, interview instructions, and promotional headings.
-- Extract all supplier letters before stripping the full source ID. Company codes use `ZY-YY-MMDD-NN PREFIX`; suffixes do not reset base-code sequencing.
+- Extract all supplier letters before stripping the full source ID. Company codes use `ZY-YY-MMDD-NN PREFIX`; suffixes do not reset base-code sequencing. Supplier letters are suggested only at initial recognition. Saved or manually edited company codes are authoritative: sanitization, display, save, and re-recognition must not reattach or replace their suffix from provenance metadata.
 - Extract explicit currency evidence even when an adjacent compact role is unfamiliar. An unknown role stays in review; it must not erase a valid wage or be guessed. Location shorthand before a role is separate from its actual name.
 - Extract age, education, gender, languages, and experience from prose summaries even when age or education appears first. Do not interpret gender embedded in a job name, customer description, or duty as a hiring restriction.
 - Explicit gender labels take precedence. Conflicting explicit values remain unresolved rather than defaulting to unrestricted. Final order gender uses only male, female, or unrestricted Chinese business values.

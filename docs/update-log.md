@@ -1,3 +1,11 @@
+## Manual code ownership and vehicle-repair recognition
+
+- Fixed supplier provenance forcing removed suffixes back into company codes on save/display.
+- Initial recognition still suggests supplier letters; subsequent single/batch edits and re-recognition preserve the entered code.
+- Added simplified/traditional vehicle-repair trade headings, qualification cues, and provided-housing notes. Unknown facts remain for review; no employer or duties are invented.
+- Added synthetic regression family REC-017, repair/currency variants, certificate counterexamples, and browser persistence checks for removed/replaced supplier suffixes.
+- Existing business records are not bulk rewritten.
+
 ## Order database date folding
 
 - Group database orders in date sections, newest first, collapsed by default.

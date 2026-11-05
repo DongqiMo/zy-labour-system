@@ -55,7 +55,7 @@ async function reparseExistingOrder(){
  if(!result.order){recognitionFeedback(result.warnings,true);return}
  const old=orders.find(o=>o.id===editing),fresh=result.order;
  fresh.sourcePrefix=fresh.sourcePrefix||old?.sourcePrefix||$('#o-code').value.match(/ ([A-Z]+)$/)?.[1]||'';
- fresh.code=ZYOrderParser.companyCode($('#o-code').value,fresh.sourcePrefix);fresh.price=$('#o-price').value;
+ fresh.code=$('#o-code').value.trim();fresh.price=$('#o-price').value;
  singleRecognitionMeta=fresh;fillRecognisedFields(fresh);recognitionFeedback(['已生成重新识别预览，核对后保存才会修改公司单',...result.warnings],false,fresh);
 }
 function recognitionMetadata(order,meta){
