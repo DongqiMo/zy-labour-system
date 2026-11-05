@@ -1,3 +1,10 @@
+## Collapsed calendar and today's date indicator
+
+- The database date finder starts collapsed each time the page is entered.
+- Today's local date has a blue background/border and semantic current-date marker, separate from the selected date.
+- Selecting dates and moving months retain the open calendar while interacting; existing filters remain available.
+- Browser verification covers entry/re-entry, today versus another selected date, and month changes.
+
 ## Return to the originating list after editing
 
 - Editing from Today's Overview now returns there after a successful save or Return to List.

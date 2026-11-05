@@ -301,6 +301,23 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('saveOrder()');admin.wait_for_function("view==='orders'")
             assert admin.evaluate('filters.orders.q')==nav_order['code']
             admin.evaluate("filters.orders.q='';filters.dashboard.q='';go('orders')")
+            # Calendar starts collapsed on entry, highlights today, and stays open during date selection.
+            admin.evaluate("filters.orders.date='';orderCalendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);go('orders')")
+            assert not admin.locator('.calendar-panel').evaluate('(el)=>el.open')
+            admin.locator('.calendar-panel > summary').click()
+            assert admin.locator('.calendar-day.calendar-today').count()==1
+            assert admin.locator('.calendar-day.calendar-today').get_attribute('aria-current')=='date'
+            colours=admin.evaluate("()=>[getComputedStyle(document.querySelector('.calendar-today')).backgroundColor,getComputedStyle(document.querySelector('.calendar-day:not(.calendar-today)')).backgroundColor]")
+            assert colours[0]!=colours[1]
+            admin.locator('.calendar-day:not(.calendar-today)').first.click()
+            assert admin.locator('.calendar-panel').evaluate('(el)=>el.open')
+            assert admin.locator('.calendar-day.primary:not(.calendar-today)').count()==1
+            assert admin.locator('.calendar-day.calendar-today').count()==1
+            admin.evaluate("moveOrderCalendar(1);moveOrderCalendar(-1)")
+            assert admin.locator('.calendar-panel').evaluate('(el)=>el.open')
+            admin.evaluate("go('dashboard');go('orders')")
+            assert not admin.locator('.calendar-panel').evaluate('(el)=>el.open')
+            admin.evaluate("selectOrderDate('')")
             # Database date groups start collapsed, toggle independently, and retain open state on rerender.
             admin.evaluate("expandedOrderDates.clear();go('orders')")
             assert admin.locator('.order-date-group').count()>0
