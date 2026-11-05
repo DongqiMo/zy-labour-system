@@ -287,6 +287,20 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch[0].employer')=='香港某物流公司'
             assert admin.evaluate('batch[1].employer')==''
             admin.evaluate("batch=[];editing=null;go('orders')")
+            # Saving/cancelling an edit returns to its originating order list and preserves filters.
+            nav_order=admin.evaluate("orders.find(o=>day(o.createdAt)===today()&&o.title&&o.salary&&o.gender)")
+            assert nav_order
+            admin.evaluate("o=>{filters.dashboard.q=o.code;filters.dashboard.s='';go('dashboard');editOrder(o.id)}",nav_order)
+            admin.locator('#o-notes').fill('导航核对已完成')
+            admin.evaluate('saveOrder()');admin.wait_for_function("view==='dashboard'")
+            assert admin.evaluate('filters.dashboard.q')==nav_order['code']
+            assert admin.evaluate("orders.find(o=>o.id==='"+nav_order['id']+"').notes")=='导航核对已完成'
+            admin.evaluate("id=>editOrder(id)",nav_order['id']);admin.evaluate('leaveOrderEditor()')
+            assert admin.evaluate('view')=='dashboard'
+            admin.evaluate("o=>{filters.orders.q=o.code;go('orders');editOrder(o.id)}",nav_order)
+            admin.evaluate('saveOrder()');admin.wait_for_function("view==='orders'")
+            assert admin.evaluate('filters.orders.q')==nav_order['code']
+            admin.evaluate("filters.orders.q='';filters.dashboard.q='';go('orders')")
             # Database date groups start collapsed, toggle independently, and retain open state on rerender.
             admin.evaluate("expandedOrderDates.clear();go('orders')")
             assert admin.locator('.order-date-group').count()>0

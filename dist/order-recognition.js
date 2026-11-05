@@ -81,7 +81,7 @@ window.saveOrder=async function(){
  if(editing)orders=orders.map(o=>o.id===editing?{...o,...candidate,...metadata,status:status(candidate.price)}:o);
  else orders=[{...candidate,...metadata,id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(candidate.price)},...orders];
  if(!await persist()){orders=before;return}
- editing=null;singleRecognitionMeta=null;go('orders');window.startBackgroundOrderAudit?.(orders);toast('劳务单已保存');
+ singleRecognitionMeta=null;leaveOrderEditor();window.startBackgroundOrderAudit?.(orders);toast('劳务单已保存');
 };
 window.copyOrder=async function(id){
  const order=ZYOrderParser.present(orders.find(o=>o.id===id)),problems=ZYOrderParser.validateCompany(order,true);

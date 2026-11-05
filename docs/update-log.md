@@ -1,3 +1,10 @@
+## Return to the originating list after editing
+
+- Editing from Today's Overview now returns there after a successful save or Return to List.
+- Editing from the Order Database returns to the database; existing search/status/date filters are retained.
+- New-order saves retain their existing destination. Failed saves continue to keep the editor open.
+- Browser coverage verifies both edit origins, cancellation, persisted changes, and filter retention.
+
 ## Source-evidence identity recognition (parser v13)
 
 - Added a document-wide position/employer candidate pass before clause routing. Values are literal source excerpts with offsets, evidence rank, and reason; no names or duties are generated.
