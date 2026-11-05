@@ -119,7 +119,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert 'XR80080' not in admin.evaluate('orders[0].raw')
             assert admin.evaluate('orders[0].title')=='铲车/叉车起重车驾驶员（货仓）'
             admin.evaluate("editing=null;mode='batch';go('new')")
-            admin.locator('#batchraw').fill('AT-1234\n招聘岗位：厨师：2名\n月薪：HKD 18,000\nAT-5678\n招聘岗位：司机：3名\n月薪：HKD 17,000')
+            admin.locator('#batchraw').fill('AT-1234\n招聘岗位：厨师：2名\n月薪：HKD 18,000\n---\nAT-5678\n招聘岗位：司机：3名\n月薪：HKD 17,000')
             admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
@@ -246,7 +246,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='12'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='13'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
@@ -270,6 +270,22 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('!!batch[0].reviewConfirmation')
             admin.locator('#batch-item-raw').fill('新增未知条件\n'+unknown)
             assert admin.evaluate("batch[0].reviewConfirmation==='' ")
+            admin.evaluate("batch=[];editing=null;go('orders')")
+            # New identities use literal source evidence in both entry modes, without title vocabulary gates.
+            identity_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-018')
+            admin.evaluate("editing=null;mode='single';go('new')")
+            admin.locator('#raw').fill(identity_source);admin.evaluate('autoParse()')
+            assert admin.locator('#o-title').input_value()=='场务协调专岗'
+            assert admin.locator('#o-employer').input_value()=='香港某物流公司'
+            assert admin.locator('#o-salary').input_value()=='HKD21890+'
+            assert admin.locator('#o-gender').input_value()=='男'
+            assert admin.locator('#o-age').input_value()=='43岁以下'
+            admin.evaluate("mode='batch';batch=[];newView()")
+            admin.locator('#batchraw').fill(identity_source+'\n---\n布草统筹专岗HK22000+\n女，42岁以下')
+            admin.evaluate('previewBatch()')
+            assert admin.evaluate('batch.map(o=>o.title)')==['场务协调专岗','布草统筹专岗']
+            assert admin.evaluate('batch[0].employer')=='香港某物流公司'
+            assert admin.evaluate('batch[1].employer')==''
             admin.evaluate("batch=[];editing=null;go('orders')")
             # Database date groups start collapsed, toggle independently, and retain open state on rerender.
             admin.evaluate("expandedOrderDates.clear();go('orders')")

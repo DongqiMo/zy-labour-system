@@ -1,3 +1,12 @@
+## Source-evidence identity recognition (parser v13)
+
+- Added a document-wide position/employer candidate pass before clause routing. Values are literal source excerpts with offsets, evidence rank, and reason; no names or duties are generated.
+- Removed mandatory title-vocabulary gating for wage-attached and recruiting headings; unique corroborated unlabelled headings also support unfamiliar positions.
+- Split employer/position/wage hiring sentences and kept adjacent demographic facts independent. Explicit labels outrank weaker headings; equally strong conflicting employers remain blank for review instead of being concatenated.
+- Replaced the previous inline title/employer routing branches. Retained source-price confidentiality, salary formatting, human review, manual code ownership, and preview-before-save for old records.
+- Batch entry now respects staff-provided standalone `---` boundaries without additional inferred splitting. Single-entry multi-order protection remains; unfamiliar compact wage headings also work there.
+- Updated REC-014 to the new literal-extraction contract and added REC-018–022, 96 identity/currency/order variants, exact evidence-span checks, negative examples, and browser single/batch checks.
+
 ## Manual code ownership and vehicle-repair recognition
 
 - Fixed supplier provenance forcing removed suffixes back into company codes on save/display.

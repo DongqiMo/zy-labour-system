@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='12';
+ const VERSION='13';
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>String(s??'').replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>String(s).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?!\d+(?:\.\d+)?\s*(?:度|℃|°C))/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
@@ -56,7 +56,7 @@
  const editorial=s=>cleanBrackets(sanitizeRaw(s)).replace(/^(?:更新|急单|急單|新增)\s*/,'').trim();
  const jobWords=/(?:大车维修|大車維修|汽车维修|汽車維修|车辆维修|車輛維修|机修工|機修工|维修工|維修工|师傅|師傅|厨师|廚師|帮厨|幫廚|帮工|幫工|侍应生|侍應生|待应生|服务员|服務員|司机|司機|驾驶员|駕駛員|清洁员|清潔員|保洁|保潔|文员|文員|销售|銷售|技工|电工|電工|美容师|美容師|理发师|理髮師|仓务|倉務|收银员|收銀員|护士|護士|护工|護工|保安|焊工|助理|经理|經理|工程师|工程師|顾问|顧問|食品加工|清洁工|清潔工|保洁员|保潔員|搬运工|搬運工|包装工|包裝工|洗碗工|杂工|雜工|售货员|售貨員|店员|店員|理货员|理貨員|收货员|收貨員|内勤|內勤|主管)/;
  function titleValue(value,explicit=false){
-  let text=editorial(value).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)?|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
+  let text=editorial(value).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:招聘(?:职位|職位|岗位|崗位|工种|工種)|招聘(?=[\s:：])|职位名称|職位名稱|职位|職位|岗位|崗位|工种|工種)\s*[:：]?\s*/,'');
   if(/^[（(]?\s*批文/.test(text))return '';
   text=text.replace(/[（(][^）)]*(?:简历|簡歷|视频|視頻|面试|面試|报名|報名|批文)[^）)]*[）)]/g,'');
   text=text.replace(/(?:HKD|HK\$|HK|港币|港幣|港元|USD|RMB|CNY|CAD|MOP|[$￥¥])\s*\d[\s\S]*$/i,'').trim();
@@ -69,18 +69,21 @@
  function roleHeader(line){
   const tagged=matchLabel(line);if(tagged)return tagged.key==='title'?titleValue(tagged.value,true):'';
   const text=stripOrdinal(line);if(/^[（(]|职责|職責|工作要求|工作内容|工作內容|负责|負責|经验|經驗|需有/.test(text))return '';
-  const recruited=text.match(/^(?:急招|招聘|诚聘|誠聘|招工)\s*[:：]?\s*(.+)$/);
-  return titleValue(recruited?recruited[1]:text,!!recruited);
+  const recruited=text.match(/^(.*?)\s*(?:急招|招聘|诚聘|誠聘|招工)\s*[:：]?\s*(.+)$/);
+  if(recruited&&(!recruited[1].trim()||employerHeading(recruited[1])))return identityTitle(recruited[2]);
+  const compact=rolePay(text);if(compact?.title)return compact.title;
+  return titleValue(text);
  }
  function salaryLine(line){const label=matchLabel(line);return label?.key==='salary'||!!rolePay(line)||(!label&&/(?:月薪|工资|工資|薪金|薪资|薪資|薪酬)\s*[:：]?\s*(?:[$￥¥]|HKD|港币|港幣|\d)/i.test(line))}
+ function splitBatchOrders(input){return String(input??'').replace(/\r\n?/g,'\n').split(/\n\s*(?:[-_=*]{3,}|下一[单份]|第\s*[\d一二三四五六七八九十]+\s*[单份])\s*(?:\n|$)/).map(s=>s.trim()).filter(Boolean)}
  function splitOrders(input){
-  const explicit=String(input??'').replace(/\r\n?/g,'\n').split(/\n\s*(?:[-_=*]{3,}|下一[单份]|第\s*[\d一二三四五六七八九十]+\s*[单份])\s*(?:\n|$)/).map(s=>s.trim()).filter(Boolean);
+  const explicit=splitBatchOrders(input);
   const output=[];
   for(const block of explicit){
    const lines=block.split('\n');let start=0,title='',hasSalary=false;
    for(let i=0;i<lines.length;i++){
     const candidate=roleHeader(lines[i]);
-    const future=lines.slice(i+1).some(salaryLine);
+    const future=salaryLine(lines[i])||lines.slice(i+1).some(salaryLine);
     const blank=i>0&&!lines[i-1].trim(),labelled=matchLabel(lines[i])?.key==='title',hasId=sourceIdentifiers(lines[i]).length>0;
     if(candidate&&title&&(candidate!==title||hasId||labelled)&&hasSalary&&(labelled||hasId||(i>0&&sourceIdentifiers(lines[i-1]).length>0)||(blank&&future))){
      let boundary=i;if(i>0&&sourceIdentifiers(lines[i-1]).length&&!roleHeader(lines[i-1]))boundary=i-1;
@@ -225,7 +228,7 @@
   const text=stripOrdinal(value),token=/(?:HKD|HK\$|HK|港币|港幣|港元|USD|RMB|CNY|CAD|MOP|[$￥¥])\s*\d[\d,]*(?:\.\d+)?(?:\s*[-~～至]\s*\d[\d,]*(?:\.\d+)?)?\+?(?:\s*[/／](?:月|天|日|小时|小時))?/ig;
   for(const match of text.matchAll(token)){
    const before=text.slice(0,match.index).replace(/^HK(?=[\u3400-\u9fff])/i,'').replace(/^(?:HK|香港)?(?:工厂|工廠)(?=\S)/,'').trim();
-   const title=titleValue(before);
+   const title=identityTitle(before);
    const compactCandidate=before.length>=2&&before.length<=30&&/[\u3400-\u9fff]/.test(before)&&!/[，,；;：:]/.test(before)&&!requirementCue.test(before)&&!dutyCue.test(before)&&!compensationPattern.test(before)&&!deductionPattern.test(before)&&!hasQuote(before)&&!hasUpstreamCharge(before);
    if(title||compactCandidate)return {title,pay:text.slice(match.index),main:match[0]};
   }return null;
@@ -235,11 +238,60 @@
  const restExpression=/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m;
  const requirementCue=/要识得|要識得|持有|资格证|資格證|证书|證書|精通|熟练|熟練|略懂|掌握|具备|具備|经验|經驗|学历|學歷|本科|大专|大專|大学|大學|中专|中專|高中|初中|认识|認識|需有|必须有|必須有|能吃苦|责任心|責任心|服从|服從|年龄|年齡/;
  const dutyCue=/负责|負責|协助|協助|主要做|能接受|处理|處理|接听|接聽|整理|操作|装卸|裝卸|盘点|盤點|存档|存檔|输入|輸入|影印|报告|報告|送递|送遞|入账|入賬|跟单|跟單|落单|落單|报价单|報價單|接待|收银|收銀|收钱|收錢|切肉|备料|備料|搬运|搬運/;
- const employerCue=/公司|集团|集團|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口|菜市场|菜市場|超市|商场|商場|市场|市場|门店|門店|连锁店|連鎖店/;
+ const employerCue=/(?:公司|集团|集團|餐厅|餐廳|酒店|美容院|美容中心|发廊|髮廊|工厂|工廠|档口|檔口|菜市场|菜市場|超市|商场|商場|市场|市場|门店|門店|连锁店|連鎖店|医院|醫院|诊所|診所|学校|學校|银行|銀行|酒楼|酒樓|餐馆|餐館|商行|事务所|事務所|会所|會所|中心|商店)(?:[（(][^）)]{1,20}[）)])?$/;
+ // Identity extraction is a document-wide evidence pass, independent of clause routing.
+ // Values must be literal excerpts; the vocabulary only corroborates weak headings.
+ function identityTitle(value){
+  const candidate=titleValue(value,true);
+  if(!candidate||candidate.length<2||candidate.length>35||summaryGender(candidate)||/^(?:本科|大专|大專|大学|大學|中专|中專|高中|初中|学历|學歷)$|^(?:会听|會聽|略懂|流利)?(?:粤语|粵語|英文|英语|英語|普通话|普通話)(?:流利|即可)?$/.test(candidate)||!/[\p{L}]/u.test(candidate)||/[，,；;：:。!?！？]/.test(candidate)||/^(?:负责|負責|协助|協助|主要|需|須|须|要|能|持有|精通|熟练|熟練|具备|具備|有经验|有經驗|制作|製作|处理|處理|提供|安排|整理)|经验|經驗|证书|證書|资格证|資格證/.test(candidate)||employerCue.test(candidate)||/(?:雇主|僱主).*(?:提供|安排)|(?:免费|免費).*(?:提供|住)|包吃|食宿/.test(candidate)||hasQuote(candidate)||hasUpstreamCharge(candidate)||compensationPattern.test(candidate)||deductionPattern.test(candidate)||/^(?:新单|新單|急单|急單|高龄|高齡|来简历|來簡歷)|^(?:候选资料|候選資料|资料待|資料待|资料另|資料另|附加内容|附加內容|另行|待核|已确认|已確認|简历|簡歷|报名|報名|面试|面試|选表|選表|录取|錄取|看过来|看過來|提供|安排|免费|免費|福利|每[周週]|每天|月休|休\d)/.test(candidate))return '';
+  return candidate;
+ }
+ function employerHeading(value){
+  const text=editorial(value).replace(/[~～:：\s]+$/,'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?$/,'').trim();
+  return text.length<=60&&employerCue.test(text)&&!/[，,；;。]/.test(text)&&!/(?:提供|安排|负责|負責|协助|協助|要求|经验|經驗|持有|工作地点|工作地點|地址|住扣)/.test(text)&&!hourExpression.test(text)&&!hasQuote(text)&&!hasUpstreamCharge(text)&&!deductionPattern.test(text)?text:'';
+ }
+ function collectIdentityEvidence(raw){
+  const candidates=[],weak=[],units=documentUnits(raw);let scope='',pending='';
+  const add=(field,value,rank,fragment,reason)=>{
+   if(!value||!fragment.text.includes(value))return;
+   const offset=fragment.text.indexOf(value);candidates.push({field,value,rank,start:fragment.start+offset,end:fragment.start+offset+value.length,fragmentStart:fragment.start,reason});
+  };
+  const wageDocument=units.some(unit=>salaryLine(unit.text));
+  for(const [unitIndex,unit]of units.entries())for(const fragment of unitFragments(unit)){
+   const label=matchLabel(fragment.text.replace(/([【\[［「『〔])([^】\]］」』〕]+)([】\]］」』〕])/g,(_,a,b,c)=>a+b.replace(/\s/g,'')+c)),key=label?.key;let text=stripOrdinal(label?label.value:fragment.text);
+   if(label){scope=key;pending=!text&&['title','employer'].includes(key)?key:'';}
+   if(!text||hasQuote(text)||hasUpstreamCharge(text)||sourceQuoteLine(text))continue;
+   if(pending&&!key){add(pending,pending==='title'?titleValue(text,true):editorial(text),0,fragment,'labelled_heading_value');pending='';continue;}
+   // A hiring relation names both parties without synthesising either name.
+   const relation=text.match(/^(.*?)\s*(?:急招|招聘|诚聘|誠聘|招工)\s*[:：]?\s*(.+)$/);
+   if(relation&&(!key||key==='employer'||key==='title'&&relation[1].trim())){
+    const employer=employerHeading(relation[1]),tail=relation[2],pay=rolePay(tail);
+    if(!relation[1].trim()||employer){add('employer',employer,key==='employer'?0:1,fragment,'recruiting_employer');add('title',identityTitle(pay?tail.slice(0,tail.indexOf(pay.main)):tail),key==='title'?0:1,fragment,'recruiting_position');continue;}
+   }
+   if(key==='title'){add('title',titleValue(text,true),0,fragment,'explicit_position');continue;}
+   if(key==='employer'){add('employer',editorial(text),0,fragment,'explicit_employer');continue;}
+   if(key)continue;
+   const pay=rolePay(text);
+   if(pay){add('title',pay.title,1,fragment,'position_attached_to_wage');continue;}
+   const employer=employerHeading(text);
+   if(employer&&(!['workContent','requirements','notes','location','interview'].includes(scope)||!!rolePay(units[unitIndex+1]?.text||''))){add('employer',employer,2,fragment,'employer_heading');continue;}
+   if(['workContent','requirements','notes','location','interview','approval'].includes(scope))continue;
+   const candidate=identityTitle(text);
+   if(candidate&&wageDocument){if(jobWords.test(candidate))add('title',candidate,2,fragment,'position_heading');else weak.push({candidate,fragment});}
+  }
+  // An isolated unlabelled heading needs document context and must be unique.
+  if(!candidates.some(item=>item.field==='title')&&unique(weak.map(item=>item.candidate)).length===1)for(const item of weak)add('title',item.candidate,3,item.fragment,'unique_position_heading_with_wage');
+  const resolve=field=>{
+   const entries=candidates.filter(item=>item.field===field);if(!entries.length)return {value:'',conflict:false,selected:[]};
+   const best=Math.min(...entries.map(item=>item.rank)),selected=entries.filter(item=>item.rank===best),values=unique(selected.map(item=>item.value));
+   return {value:values.length===1?values[0]:'',conflict:values.length>1,selected};
+  };
+  return {candidates,title:resolve('title'),employer:resolve('employer')};
+ }
  function catalogDocument(raw){
-  const buckets={},titles=[],ledger=[],explicitGenders=[],inferredGenders=[];let section='',componentLabel='',current=null;
+  const identities=collectIdentityEvidence(raw),buckets={},ledger=[],explicitGenders=[],inferredGenders=[];let section='',componentLabel='',current=null;
   const push=(key,value,reason='semantic')=>{if(value)(buckets[key]??=[]).push(value);if(current){current.fields=unique([...current.fields,key]);current.disposition='classified';current.reason=reason;}};
-  const title=(value,rank)=>{if(value){titles.push({value,rank});push('title',value,rank===0?'explicit_label':'role_heading');}};
+  const title=(value,rank)=>{if(value)push('title',value,rank===0?'explicit_label':'role_heading');};
   const exclude=reason=>{current.disposition='excluded';current.reason=reason;};
   for(const unit of documentUnits(raw)){
    const unitLabel=matchLabel(unit.text.replace(/([【\[［「『〔])([^】\]］」』〕]+)([】\]］」』〕])/g,(_,a,b,c)=>a+b.replace(/\s/g,'')+c));
@@ -262,24 +314,29 @@
     if(sourceQuoteLine(text)&&!['salary','compensation','age','hours','rest'].includes(key)&&!(index===0&&unitLabel?.key==='salary')&&!(section==='salary'&&/^(?:\d[\d,.]*|(?:HKD|HK\$|HK)\s*\d[\d,.]*\+?)$/i.test(text)&&ledger.at(-2)?.reason==='section_heading')){exclude('unlabelled_amount');continue;}
     if(!tag&&ledger.at(-2)?.reason==='section_heading'&&ledger.at(-2)?.fields.includes(section)&&['salary','age','hours','rest','language','gender','employer'].includes(section)){push(section,text,'label_value');if(section==='gender')explicitGenders.push(text);continue;}
     if(/^(?:新单|新單|更新|急单|急單|高龄看过来|高齡看過來)[🔥~～!！\s]*$/.test(cleanBrackets(text))){exclude('promotional_heading');continue;}
+    const identity=identities.candidates.filter(item=>item.fragmentStart===fragment.start);
+    for(const item of identity){if(item.field==='title')title(item.value,item.rank);else push('employer',item.value,item.reason);}
+    if(identity.length){current.evidence=identity;const gender=summaryGender(text);if(gender){inferredGenders.push(gender);push('gender',gender,'identity_demographics');}const age=text.match(ageExpression)?.[0];if(age)push('age',age,'identity_demographics');}
+    // Bare demographic summaries remain independent of the preceding paragraph's field.
+    if(!key&&!identity.length){const gender=summaryGender(text),age=text.match(ageExpression)?.[0];if((gender||age&&/^\d{2}/.test(text))&&!dutyCue.test(text)&&!hasCost(text)){
+     if(gender){inferredGenders.push(gender);push('gender',gender,'demographic_summary');}if(age)push('age',age,'demographic_summary');push('requirements',text,'demographic_summary');section='';continue;
+    }}
     const compact=rolePay(text);
-    if(compact&&(!key||key==='title')){if(compact.title)title(compact.title,key==='title'?0:1);push('salary',compact.pay,'inline_role_and_pay');if(!compact.title){current.disposition='review';current.reason='unknown_inline_role';}inferredGenders.push(summaryGender(text));section='';continue;}
+
+    if(compact&&(!key||key==='title')){push('salary',compact.pay,'inline_role_and_pay');if(!compact.title){current.disposition='review';current.reason='unknown_inline_role';}inferredGenders.push(summaryGender(text));section='';continue;}
     if(key==='title'){
-     title(titleValue(text,true),0);if(!current.fields.length)current.reason='uncertain_title';
+     if(!current.fields.length)current.reason='uncertain_title';
      const prep=text.match(/[（(]([^）)]*(?:视频|視頻|简历|簡歷|面试|面試)[^）)]*)[）)]/);if(prep)push('interview',prep[1],'interview_preparation');
      const gender=summaryGender(text);if(gender)inferredGenders.push(gender);
      const age=text.match(ageExpression)?.[0];if(age)push('age',age);continue;
     }
     if(key==='gender'){explicitGenders.push(text);push('gender',text,'explicit_label');continue;}
     if(key==='compensation'){push('notes',componentLabel+'：'+text,'salary_component');continue;}
+    if(key==='employer'&&identity.length){const pay=rolePay(text);if(pay)push('salary',pay.pay,'recruiting_salary');section='';continue;}
     if(key){push(key,text,'explicit_label');if(key==='requirements'){const g=summaryGender(text);if(g)inferredGenders.push(g);}continue;}
-    if(section==='title'&&!titles.length){const found=titleValue(text,true);if(found){title(found,0);section='';continue;}}
-    const employer=editorial(text).replace(/[~～:：\s]+$/,'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?$/,'');
-    if(employer.length<50&&employerCue.test(employer)&&!roleHeader(text)&&!requirementCue.test(text)&&!dutyCue.test(text)&&!hourExpression.test(text)&&!deductionPattern.test(text)){push('employer',employer,'employer_heading');section='';continue;}
+    if(identity.length){section='';const pay=rolePay(text);if(pay)push('salary',pay.pay,'recruiting_salary');continue;}
     if(/^[（(]?批文/.test(text)){push('notes',text,'approval_description');continue;}
     if(/面[试試]|试工|試工|(?:需附|附|提供).*(?:视频|視頻)/.test(text)){push('interview',text,'interview_instruction');continue;}
-    const role=roleHeader(text);
-    if(role&&(!section||section==='title')&&!requirementCue.test(text)&&!dutyCue.test(text)){title(role,1);const g=summaryGender(text);if(g)inferredGenders.push(g);const age=text.match(ageExpression)?.[0];if(age)push('age',age);section='';continue;}
     if(/食宿|包吃|包食|工作餐|住宿|宿舍|吃自理|(?:提供|安排|免费|免費).*住/.test(text)&&!deductionPattern.test(text)&&!dutyCue.test(text)){push('notes',text,'meal_or_housing_fact');continue;}
     if(deductionPattern.test(text)){push('notes',text,'employee_deduction');continue;}
     if(compensationPattern.test(text)||/劳工假|勞工假|年假|福利|(?:满|滿).*(?:月|年)/.test(text)){push('notes',section==='compensation'?componentLabel+'：'+text:text,'pay_or_benefit_condition');continue;}
@@ -304,7 +361,8 @@
   const salaryValues=unique((buckets.salary||[]).map(value=>extractPay(value).main).filter(Boolean).map(formatCompanySalary));
   const gender=explicitGenders.length?normalizeGender(explicitGenders.join('\n'),raw):normalizeGender(unique(inferredGenders.filter(Boolean)).join('\n'));
   const conflicts=[];
-  if(unique(titles.map(item=>item.value)).length>1)conflicts.push('title');
+  if(identities.title.conflict)conflicts.push('title');
+  if(identities.employer.conflict)conflicts.push('employer');
   if(salaryValues.length>1)conflicts.push('salary');
   if((explicitGenders.length||inferredGenders.some(Boolean))&&!gender)conflicts.push('gender');
   if(salaryValues.length)for(let i=0;i<ledger.length;i++){
@@ -312,14 +370,14 @@
    if(i>0&&entry.fields.includes('salary')&&/(?:满|滿).*(?:月|年)|(?:入职|入職).*(?:后|後)/.test(ledger[i-1].text)&&ledger[i-1].fields.includes('notes'))ledger[i-1].fields=['salary'];
   }
   for(const entry of ledger)if(entry.fields.some(key=>conflicts.includes(key))){entry.disposition='conflict';entry.reason='conflicting_candidates';}
-  return {buckets,titles,ledger,gender,titleConflict:conflicts.includes('title'),salaryConflict:salaryValues.length>1};
+  return {buckets,ledger,gender,identities,titleConflict:conflicts.includes('title'),salaryConflict:salaryValues.length>1};
  }
 
  function parseOne(input,code=''){
   const o={raw:sanitizeRaw(input),code:companyCode(code,sourcePrefix(input)),sourcePrefix:sourcePrefix(input),parserVersion:VERSION};
-  const catalog=catalogDocument(o.raw),{buckets,titles}=catalog;
+  const catalog=catalogDocument(o.raw),{buckets}=catalog;
   const joined=key=>unique(buckets[key]||[]).join('\n');
-  o.title=catalog.titleConflict?'':titles.sort((a,b)=>a.rank-b.rank)[0]?.value||'';o.employer=joined('employer');
+  o.title=catalog.identities.title.value;o.employer=catalog.identities.employer.value;
   const pay=extractPay((buckets.salary||[])[0]||'');o.salary=catalog.salaryConflict?'':pay.salary;
   o.gender=catalog.gender;
   const context=[joined('age'),joined('requirements'),joined('title')].filter(Boolean).join('\n');
@@ -342,14 +400,14 @@
   o.notes=unique(noteParts).join('；');
   const result=sanitizeCompany(o);
   for(const entry of catalog.ledger)entry.fields=unique(entry.fields.map(key=>key==='shift'?'hours':key));
-  result.recognitionAudit=JSON.stringify({version:VERSION,fragments:catalog.ledger});
+  result.recognitionAudit=JSON.stringify({version:VERSION,fragments:catalog.ledger,identityCandidates:catalog.identities.candidates});
   result.parsedSnapshot=JSON.stringify(Object.fromEntries(['code','title','employer','salary','gender','age','language','hours','rest','workContent','requirements','interview','notes'].map(key=>[key,result[key]||''])));
   return result;
  }
- function analyze(input,code=''){
-  const parts=splitOrders(input),warnings=[];
+ function analyze(input,code='',options={}){
+  const parts=options.explicitBoundary?[String(input||'').trim()]:splitOrders(input),warnings=[];
   if(parts.length>1)return {parts,order:null,warnings:['检测到多份原单，请使用批量录入或拆分后处理']};
-  const order=parseOne(parts[0]||'',code);
+  const order=parseOne(parts[0]||'',code);if(options.explicitBoundary)order.boundaryMode='explicit';
   if(!order.title)warnings.push('未可靠识别职位，请人工核对');if(!order.gender)warnings.push('性别不明确或有冲突，请人工选择');if(!order.salary)warnings.push('未可靠识别主薪资，请人工核对');
   const review=reviewOrder(input,order);
   warnings.push(...review.warnings);
@@ -394,6 +452,7 @@
   if(!order.hours)warnings.push('未识别工作时间，请核对原单');
   if(/^休\s*\d+$/.test(String(order.rest||'').trim()))warnings.push('休息周期不明确，请确认是每周还是每月');
   if(unclassified.length)warnings.push('部分原单内容尚未分类，请核对未分类内容');
+  if(conflicts.some(entry=>entry.fields.includes('employer')))warnings.push('识别到多个雇主名称，请人工核对');
   if(conflicts.some(entry=>entry.fields.includes('salary')))warnings.push('识别到多组薪资，请人工核对或拆分原单');
   return {warnings:reviewed?[]:unique(warnings),sources,unclassified:reviewed?[]:unclassified,excluded,conflicts:reviewed?[]:conflicts,ledger,reviewed,needsAcknowledgement:!reviewed&&!!(unclassified.length||conflicts.length)};
  }
@@ -416,7 +475,7 @@
   return result;
  }
  function validateCompany(order,forPublication=false){
-  const errors=[],reviewed=isHumanReviewed(order);if(forPublication&&!reviewed&&Number(order.parserVersion)>=8&&reviewOrder(order.raw||'',order).needsAcknowledgement&&!hasReviewConfirmation(order))errors.push('请先核对未分类或冲突内容并确认');if(forPublication&&!order.salary)errors.push('未可靠识别主薪资，请人工核对');if(!reviewed&&splitOrders(order.raw||'').length>1)errors.push('检测到多份原单，请使用批量录入或拆分后处理');
+  const errors=[],reviewed=isHumanReviewed(order);if(forPublication&&!reviewed&&Number(order.parserVersion)>=8&&reviewOrder(order.raw||'',order).needsAcknowledgement&&!hasReviewConfirmation(order))errors.push('请先核对未分类或冲突内容并确认');if(forPublication&&!order.salary)errors.push('未可靠识别主薪资，请人工核对');if(!reviewed&&order.boundaryMode!=='explicit'&&splitOrders(order.raw||'').length>1)errors.push('检测到多份原单，请使用批量录入或拆分后处理');
   if(!order.title||generic.test(order.title)||/^[（(]?批文/.test(order.title))errors.push('未可靠识别职位，请人工核对');
   if(!['男','女','男女不限'].includes(order.gender))errors.push('请选择招聘性别：男、女或男女不限');
   if(!validCode(order.code))errors.push('公司单号格式应为 ZY-年份-月日-流水，可附上家字母');
@@ -443,5 +502,5 @@
   view.employer=editorial(view.employer||'').replace(/(?:招聘|招工|诚聘|誠聘)\s*[:：]?\s*$/,'');
   const result=sanitizeCompany(view);result.salary=formatCompanySalary(result.salary);return result;
  }
- root.ZYOrderParser={isHumanReviewed,hasReviewConfirmation,humanReviewMetadata,reviewSignature,formatCompanySalary,reviewOrder,parse,analyze,splitOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
+ root.ZYOrderParser={isHumanReviewed,hasReviewConfirmation,humanReviewMetadata,reviewSignature,formatCompanySalary,reviewOrder,parse,analyze,splitOrders,splitBatchOrders,sourcePrefix,sourceIdentifiers,sanitizeRaw,sourceCode:companyCode,companyCode,baseCode,validCode,titleValue,normalizeGender,cleanField,extractPay,stripSourcePackage,cleanCompanyText,sanitizeCompany,repairLegacyOrders,present,validateCompany};
 })(globalThis);

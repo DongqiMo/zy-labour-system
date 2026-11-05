@@ -270,18 +270,14 @@
     },
     {
       "id": "REC-014",
-      "problem": "An unfamiliar position also prevented an otherwise explicit currency amount from being extracted.",
-      "rootCause": "Role recognition and wage recognition were coupled instead of retaining independent evidence.",
+      "problem": "An unfamiliar compact position was withheld despite literal role/wage evidence.",
+      "rootCause": "A vocabulary membership check was used as a mandatory position gate.",
       "source": "HK工序协调专岗HK17320+\n男女，40岁内\n工作时间：每天9小时",
       "expected": {
-        "title": "",
+        "title": "工序协调专岗",
         "salary": "HKD17320+",
         "gender": "男女不限"
-      },
-      "unknown": [
-        "HK工序协调专岗HK17320+"
-      ],
-      "warning": "职位"
+      }
     },
     {
       "id": "REC-015",
@@ -351,6 +347,74 @@
       "forbidden": [
         "2.79"
       ]
+    },
+    {
+      "id": "REC-018",
+      "problem": "Employer and unfamiliar position in one hiring sentence competed for one field.",
+      "rootCause": "First-match clause routing and vocabulary gates prevented independent identity extraction.",
+      "source": "香港某物流公司招聘场务协调专岗，男，43岁以下，月薪HK21890+\n每天9小时，轮班\n工作内容：整理货物\n💰3.87",
+      "expected": {
+        "title": "场务协调专岗",
+        "employer": "香港某物流公司",
+        "gender": "男",
+        "age": "43岁以下",
+        "salary": "HKD21890+"
+      },
+      "forbidden": [
+        "3.87"
+      ]
+    },
+    {
+      "id": "REC-019",
+      "problem": "Several employer candidates were concatenated as if they named one employer.",
+      "rootCause": "Employer buckets were joined without evidence ranking or ambiguity checks.",
+      "source": "雇主：测试甲物流公司\n雇主：测试乙物流公司\n岗位：场务协调专岗\n工资：HK21000\n性别：女",
+      "expected": {
+        "title": "场务协调专岗",
+        "employer": "",
+        "salary": "HKD21000"
+      },
+      "conflict": "employer",
+      "warning": "多个雇主"
+    },
+    {
+      "id": "REC-020",
+      "problem": "An unlisted standalone position heading was ignored even with a wage elsewhere in the document.",
+      "rootCause": "Standalone identity headings required dictionary membership.",
+      "source": "海岸连锁酒店\n场务协调专岗\n工资：HK21000\n性别：男\n年龄：43岁以下\n每天9小时\n工作内容：整理用品",
+      "expected": {
+        "title": "场务协调专岗",
+        "employer": "海岸连锁酒店",
+        "salary": "HKD21000"
+      },
+      "contains": {
+        "workContent": [
+          "整理用品"
+        ]
+      }
+    },
+    {
+      "id": "REC-021",
+      "problem": "Qualification and accommodation descriptions must not become identities.",
+      "rootCause": "Broad heading inference can confuse business conditions with position or employer names.",
+      "source": "资格证书：车辆维修证书\n雇主免费提供住宿\n工资：HK21000\n性别：男\n年龄：43岁以下\n工作内容：检查设备",
+      "expected": {
+        "title": "",
+        "employer": "",
+        "salary": "HKD21000"
+      },
+      "warning": "职位"
+    },
+    {
+      "id": "REC-022",
+      "problem": "An explicit employer must outrank weaker incidental establishment headings.",
+      "rootCause": "Unranked employer buckets mixed different strengths of evidence.",
+      "source": "海岸连锁酒店\n雇主：测试服务公司\n岗位：接待协调专岗\n工资：HK21000\n性别：女\n工作内容：接听电话",
+      "expected": {
+        "employer": "测试服务公司",
+        "title": "接待协调专岗",
+        "salary": "HKD21000"
+      }
     }
   ]
 }

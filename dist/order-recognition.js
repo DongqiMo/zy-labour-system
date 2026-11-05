@@ -49,9 +49,9 @@ window.autoParse=async function(){
  const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
  recognitionFeedback(result.warnings,false,order);toast('整理完成，请核对各项信息');
 };
-function moveSourceToBatch(){batchInput=$('#raw').value;batch=[];editing=null;mode='batch';newView();previewBatch()}
+function moveSourceToBatch(){batchInput=ZYOrderParser.splitOrders($('#raw').value).join('\n---\n');batch=[];editing=null;mode='batch';newView();previewBatch()}
 async function reparseExistingOrder(){
- const input=orders.find(o=>o.id===editing)?.raw||$('#raw').value,result=ZYOrderParser.analyze(input,$('#o-code').value);
+ const input=orders.find(o=>o.id===editing)?.raw||$('#raw').value,result=ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:orders.find(o=>o.id===editing)?.boundaryMode==='explicit'});
  if(!result.order){recognitionFeedback(result.warnings,true);return}
  const old=orders.find(o=>o.id===editing),fresh=result.order;
  fresh.sourcePrefix=fresh.sourcePrefix||old?.sourcePrefix||$('#o-code').value.match(/ ([A-Z]+)$/)?.[1]||'';
@@ -62,14 +62,14 @@ function recognitionMetadata(order,meta){
  if(!meta)return {};
  let previous={};try{previous=JSON.parse(meta.parsedSnapshot||'{}')}catch{}
  const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String((key==='salary'?ZYOrderParser.formatCompanySalary(previous[key]):previous[key])??''));
- return {sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
+ return {boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
 }
 window.saveOrder=async function(){
  const data=read(orderFields),input=$('#raw').value.trim();
  if(!input||!data.title||!data.code)return toast('请填写原单、职位名称和公司单号');
  const oldRecord=editing?orders.find(o=>o.id===editing):null;
  const origin=data.code.match(/ ([A-Z]+)$/)?.[1]||singleRecognitionMeta?.sourcePrefix||ZYOrderParser.sourcePrefix(input);
- const candidate=ZYOrderParser.sanitizeCompany({...data,sourcePrefix:origin,raw:oldRecord?.raw??ZYOrderParser.sanitizeRaw(input)});
+ const candidate=ZYOrderParser.sanitizeCompany({...data,boundaryMode:oldRecord?.boundaryMode||singleRecognitionMeta?.boundaryMode||'',sourcePrefix:origin,raw:oldRecord?.raw??ZYOrderParser.sanitizeRaw(input)});
  candidate.salary=ZYOrderParser.formatCompanySalary(candidate.salary);
  if(editing)Object.assign(candidate,ZYOrderParser.humanReviewMetadata(candidate,sessionUser?.username));
  const problems=ZYOrderParser.validateCompany(candidate,!!editing);if(problems.length){recognitionFeedback(problems,ZYOrderParser.splitOrders(input).length>1);return toast(problems[0])}

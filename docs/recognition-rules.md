@@ -6,9 +6,9 @@ This is the durable implementation contract. It describes the current shared sys
 
 The sole recognition engine is `dist/order-parser.js`. Single entry, batch entry, re-recognition previews, source review, and publication validation call this engine. It is a deterministic, offline-capable JavaScript rule engine, not an externally trained model or an autonomous learning service. Improvements are deliberate code/rule changes tested against the catalog. Do not send source orders to external AI services without a separately authorized integration.
 
-1. Determine order boundaries from the entire document. Separate explicit markers and coherent role/pay blocks. Single-entry mode refuses multiple orders.
+1. In batch entry, staff-provided standalone `---` (or the existing explicit separator aliases) defines each document; never infer additional documents inside a supplied segment. Retain single-entry detection of multiple coherent role/pay blocks as a guard. Boundary metadata is private and retained on save/re-recognition.
 2. Build logical source units and UTF-16 spans, recovering inline and wrapped labels without deleting unknown text.
-3. Classify clauses using explicit labels, paragraph scope, and semantic cues. A line can supply several fields. Generic role/currency separation replaces role-specific shortcuts.
+3. Collect literal position/employer candidates across all source units before clause routing, then classify clauses using explicit labels, paragraph scope, and semantic cues. A line can supply several fields. Generic role/currency separation replaces role-specific shortcuts.
 4. Assemble candidates for every field after classification. Check independent main salaries, titles, and gender for conflicts before choosing values.
 5. Sanitize company fields, classify financial information, and format company monthly salary.
 6. Produce provenance, exclusions, review items, and conflicts from the actual classified spans, not substring guesses about final output.
@@ -34,11 +34,16 @@ The ledger records how text was handled; it is not a guarantee of semantic corre
 - Prefer explicit labels and their paragraph scope over unlabeled guesses. A role heading may contain an attached salary, so extracting the title must not consume or erase its wage.
 - Position excludes source IDs, wages, trailing salary plus signs, headcount, age/gender/language qualifiers, approval-only job names, interview instructions, and promotional headings.
 - Extract all supplier letters before stripping the full source ID. Company codes use `ZY-YY-MMDD-NN PREFIX`; suffixes do not reset base-code sequencing. Supplier letters are suggested only at initial recognition. Saved or manually edited company codes are authoritative: sanitization, display, save, and re-recognition must not reattach or replace their suffix from provenance metadata.
-- Extract explicit currency evidence even when an adjacent compact role is unfamiliar. An unknown role stays in review; it must not erase a valid wage or be guessed. Location shorthand before a role is separate from its actual name.
+- Extract explicit currency evidence even when an adjacent compact role is unfamiliar. An unfamiliar role is extracted literally when a label, hiring relationship, compact wage heading, or unique corroborated standalone heading supports it. Dictionary membership is not required. Unsupported or ambiguous headings stay in review; they must not erase a valid wage or be guessed. Location shorthand before a role is separate from its actual name.
 - Extract age, education, gender, languages, and experience from prose summaries even when age or education appears first. Do not interpret gender embedded in a job name, customer description, or duty as a hiring restriction.
 - Explicit gender labels take precedence. Conflicting explicit values remain unresolved rather than defaulting to unrestricted. Final order gender uses only male, female, or unrestricted Chinese business values.
 - Distinguish skills/qualifications from operational duties. Unlabelled office-document activities remain duties. Known explicit duties/requirements paragraphs preserve author intent.
-- Employer headings include groups and common establishments. Do not invent a company name from a salary/job heading.
+- Position and employer candidates carry literal source excerpts, exact UTF-16 start/end offsets, evidence rank, and reason. Explicit labels outrank recruiting relations and inferred headings; different candidates at the strongest rank leave the field blank and trigger review. Weaker mentions do not overwrite an explicit identity.
+- A hiring sentence can supply employer, position, wage, gender, and age independently. Removing field labels, decorative symbols, and location/wage suffixes does not authorize paraphrasing or supplying an unstated job, employer, or duty.
+- The role dictionary only corroborates weak standalone headings. An unlisted short standalone heading may be accepted when it is the unique viable heading in a wage document; certificates, promotional text, duties, accommodation conditions, locations, and unknown labelled conditions are not position headings.
+- Employer headings include groups and common establishments. Hiring relations are split into literal employer/position excerpts. Distinct employers at the same evidence strength are not concatenated. A wage alone is never evidence of an employer. Do not invent an employer or duties from a position.
+- Clear standalone demographic summaries are extracted separately from preceding paragraph scope. Identifying a position/employer must not consume adjacent age, gender, or salary evidence.
+- Multi-order boundaries recognise unfamiliar compact wage headings and include the current line as wage evidence. They do not require a salary on a subsequent line.
 - There is no separate company Shift field. Merge source/legacy shift descriptions into Working Hours, retaining the original description and avoiding duplicate wording.
 - Preserve language proficiency, interview preparation, bonus eligibility, accommodation requirements, and physical quantities. An unclear rest shorthand is retained and flagged, not converted to an invented monthly total.
 
@@ -87,7 +92,7 @@ GitHub runs recognition checks on relevant pushes and pull requests. The Pages w
 
 Retained: shared-field schema, authenticated adapters, permissions, conflict-protected persistence, source archives, manual data, backup/restore, HKD formatting, salary/deduction distinction, supplier-prefix handling, and narrow legacy repairs.
 
-Removed/replaced: the food-processing-specific compact-header branch, the old line fall-through classifier, pre-classification deletion of unknown/financial lines, reverse-substring provenance guesses, and overridden inline single/batch/save/copy handlers. Do not restore them as a fallback: maintain one tested path.
+Removed/replaced: inline first-match title/employer routing and unranked employer concatenation (replaced by document identity evidence collection), the food-processing-specific compact-header branch, the old line fall-through classifier, pre-classification deletion of unknown/financial lines, reverse-substring provenance guesses, and overridden inline single/batch/save/copy handlers. Do not restore them as a fallback: maintain one tested path.
 
 ## Read-only seven-field self-audit
 

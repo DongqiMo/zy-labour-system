@@ -5,7 +5,7 @@
  let report=null,auditGeneration=0;
  function inspect(record){
   if(ZYOrderParser.isHumanReviewed(record))return {id:record.id,code:record.code||'',raw:record.raw||'',candidate:ZYOrderParser.present(record),missing:[],unsupported:[],sources:{},changed:[],warnings:[],conflicts:[],unclassified:[],needsReview:false,humanReviewed:true};
-  const analysis=ZYOrderParser.analyze(record.raw||'',record.code||'');
+  const analysis=ZYOrderParser.analyze(record.raw||'',record.code||'',{explicitBoundary:record.boundaryMode==='explicit'});
   const candidate=analysis.order?ZYOrderParser.present({...analysis.order,code:record.code,price:record.price}):null;
   const current=ZYOrderParser.present(record),missing=required.filter(key=>!String(candidate?.[key]||'').trim());
   const unsupported=candidate?required.filter(key=>String(candidate[key]||'').trim()&&!(analysis.sources?.[key]?.length)):[];
@@ -20,7 +20,7 @@
    records.push(inspect(source[i]));if(i%20===19)await new Promise(resolve=>setTimeout(resolve,0));
   }
   if(sessionUser!==owner||run!==auditGeneration)return false;
-  report={format:'zy-order-recognition-audit',version:1,parserVersion:'12',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
+  report={format:'zy-order-recognition-audit',version:1,parserVersion:'13',generatedAt:new Date().toISOString(),total:records.length,needsReview:records.filter(record=>record.needsReview).length,records};
   refreshOrderAuditBadge();return true;
  }
  window.refreshOrderAuditBadge=function(){document.querySelectorAll('[data-order-audit-count]').forEach(element=>element.textContent=report?'('+report.needsReview+'/'+report.total+')':'')};

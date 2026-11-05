@@ -69,3 +69,35 @@ for(const code of ['ZY-26-1103-91','ZY-26-1103-91 OTHER']){
 for(const title of ['大车维修','汽車維修','机修工','维修工'])for(const currency of ['HK','HK$','HKD']){const o=P.parse(`${title}${currency}24780+\n男，49岁内`);assert.equal(o.title,title);assert.equal(P.present(o).salary,'HKD24780+');}
 assert.equal(P.parse('汽车维修资格证\n岗位：司机\n工资：HK18000').title,'司机');
 console.log('PASS: manual code precedence and vehicle repair/certificate boundaries');
+
+// Identity evidence is collected across the document, never from a fixed row or a known-title gate.
+let identityVariants=0;
+for(const title of ['工序协调专岗','场务统筹专岗','接待协调专岗','布草整理专岗'])for(const currency of ['HK','HK$','HKD','港幣'])for(const format of ['招聘','compact','labelled']){
+ const header=format==='招聘'?`海岸测试酒店招聘${title}${currency}21890+`:format==='compact'?`海岸测试酒店\n${title}${currency}21890+`:`【雇主】海岸测试酒店\n【岗位】${title}\n【月薪】${currency}21890+`;
+ const sections=[header,'男，43岁以下，粤语','工作时间：每天9小时，轮班','工作内容：整理用品','备注：住扣10%\n💰3.87'];
+ for(const reverse of [false,true]){
+  const raw=(reverse?[...sections].reverse():sections).join('\n'),r=P.analyze(raw,'ZY-26-1103-90');assert(r.order);const o=P.present(r.order);
+  assert.equal(o.title,title,raw);assert.equal(o.employer,'海岸测试酒店',raw);assert.equal(o.salary,'HKD21890+',raw);assert.equal(o.gender,'男');assert.equal(o.age,'43岁以下');assert(!businessKeys.map(k=>o[k]||'').join('').includes('3.87'));coverage(r);
+  const evidence=JSON.parse(r.order.recognitionAudit).identityCandidates;
+  for(const e of evidence)assert.equal(r.order.raw.slice(e.start,e.end),e.value,'Identity must be a literal source excerpt');
+  for(const key of ['title','employer'])assert(evidence.some(e=>e.field===key&&e.value===o[key]));identityVariants++;
+ }
+}
+for(const text of ['雇主提供住宿','持有车辆维修证书','工作地点：海岸测试酒店','工作内容：接待海岸测试酒店客户','【自定义】场务统筹专岗']){
+ const r=P.parse(text+'\n工资：HK21000\n性别：男');assert.equal(r.title,'',text);assert.equal(r.employer,'',text);
+}
+const literal=P.parse('岗位：布草整理专岗\n工资：HK21000\n性别：女');assert.equal(literal.title,'布草整理专岗');assert.equal(literal.employer,'');assert.equal(literal.workContent,'');
+const paired='工序协调专岗HK21000\n男，43岁以下\n\n布草统筹专岗HK22000\n女，42岁以下';assert.equal(P.splitOrders(paired).length,2);assert.deepEqual(P.splitOrders(paired).map(s=>P.parse(s).title),['工序协调专岗','布草统筹专岗']);
+console.log(`PASS: ${identityVariants} identity/currency/order variants, literal source spans, no invented employers/duties and unfamiliar multi-order boundaries`);
+
+// Staff-supplied batch boundaries are authoritative; do not infer extra documents inside them.
+const delimited='岗位：司机\n工资：HK21000\n岗位：接待协调专岗\n---\n岗位：厨师\n工资：HK22000';
+assert.equal(P.splitBatchOrders(delimited).length,2);assert.equal(P.splitBatchOrders(delimited.replace('\n---\n','\n')).length,1);
+const confirmed=P.analyze(P.splitBatchOrders(delimited)[0],'ZY-26-1103-90',{explicitBoundary:true});assert(confirmed.order);assert.equal(confirmed.order.boundaryMode,'explicit');assert.equal(confirmed.order.title,'');assert(confirmed.conflicts.some(e=>e.fields.includes('title')));assert(!P.validateCompany(confirmed.order).some(e=>e.includes('检测到多份')));
+assert.equal(P.analyze(P.splitBatchOrders(delimited)[0]).order,null,'Single entry still detects multiple explicit roles');
+
+for(const heading of ['男','男女','粤语','本科','43岁以下','雇主免费提供住宿']){const o=P.parse(heading+'\n工资：HK21000');assert.equal(o.title,'',heading+' is a condition, not a role');assert.equal(o.employer,'');}
+assert.equal(P.parse('岗位：招聘专员\n工资：HK21000').title,'招聘专员');assert.equal(P.parse('资料录入专岗HK21000').title,'资料录入专岗');
+
+for(const title of ['餐厅服务员','酒店前台','美容中心接待专岗']){const o=P.parse(title+'\n工资：HK21000');assert.equal(o.title,title);assert.equal(o.employer,'');}
+for(const employer of ['海岸诊所','海岸医院','海岸商行','海岸会所']){const o=P.parse(employer+'\n工序协调专岗HK21000');assert.equal(o.employer,employer);assert.equal(o.title,'工序协调专岗');}
