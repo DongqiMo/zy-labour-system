@@ -120,3 +120,7 @@ SQL, transport and model boundaries have mocked tests; live account/model setup 
 ## Optional DeepSeek provider
 
 The same authenticated assistance contract also supports DeepSeek, selected explicitly by server secrets. It uses fixed allowlisted literal facts, existing quota reservations and first-machine metadata. Truncated completion output is rejected; reasoning shares the 8192-token cap. Existing populated fields and manual ownership remain authoritative. See [DeepSeek setup](deepseek-setup.md) for deployment, activation and limitations. The local test prompt differs from this extractive production prompt; live acceptance remains required.
+
+## Recognition progress
+
+Single-entry Auto Organise exposes stage percentages next to its button. Waiting for the external provider stays at a fixed stage until a response arrives; this is not token or time-based progress. Repeated clicks are disabled. Success reaches 100 percent only after the result is applied; failures and late results discarded after user edits do not claim completion. Both rule and AI duration checks accept Cantonese 个钟/個鐘 units without treating currency suffixes as hours.

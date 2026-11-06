@@ -1,6 +1,6 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='16';
+ const VERSION='17';
  const recognitionText=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g,' ');
  const stripDecoration=s=>String(s??'').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]/gu,'').replace(/\[(?:红包|紅包|烟花|煙花|玫瑰|庆祝|慶祝|强|強)\]/g,'');
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -241,7 +241,7 @@
  const ageExpression=/(?<![\d:：])(?:\d{2}\s*[-–~～至]\s*\d{2}\s*[岁歲]\s*(?:以下|以内|以內|以上|内|內|左右)?|\d{2}\s*[岁歲]\s*(?:以下|以内|以內|以上|内|內|左右)?)/;
  const clockExpression=/(?<!\d)\d{1,2}[:：]\d{2}\s*[-–~～至]\s*\d{1,2}[:：]\d{2}/;
  const requirementDescription=s=>/^(?:有|具有|具备|具備|要求|需要|须|須|至少|熟悉|熟练|熟練|精通|懂得|会|會|持有|优先|優先|最好|相关|相關).*(?:经验|經驗|学历|學歷|技能|证书|證書|优先|優先)/.test(recognitionText(s));
- const hourExpression=/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|[hH](?![A-Za-z]))/;
+ const hourExpression=/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|(?:个|個)?[钟鐘]|[hH](?![A-Za-z]))/;
  const restExpression=/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m;
  const requirementCue=/要识得|要識得|持有|资格证|資格證|证书|證書|精通|熟练|熟練|略懂|掌握|具备|具備|经验|經驗|学历|學歷|本科|大专|大專|大学|大學|中专|中專|高中|初中|认识|認識|需有|必须有|必須有|能吃苦|责任心|責任心|服从|服從|年龄|年齡/;
  const dutyCue=/负责|負責|协助|協助|主要做|能接受|处理|處理|接听|接聽|整理|操作|装卸|裝卸|盘点|盤點|存档|存檔|输入|輸入|影印|报告|報告|送递|送遞|入账|入賬|跟单|跟單|落单|落單|报价单|報價單|接待|收银|收銀|收钱|收錢|切肉|备料|備料|搬运|搬運/;
@@ -396,7 +396,7 @@
   o.age=unique((buckets.age||[]).map(v=>v.trim())).join('；')||context.match(ageExpression)?.[0]||'';
   o.language=joined('language')||unique(input.match(/广东话|廣東話|国语|國語|粤语|粵語|普通话|普通話|英语|英語|英文|日语|日語|韩语|韓語|客家话|客家話|潮汕话|潮汕話/g)||[]).join('、');
   const scheduling=joined('hours');
-  const hours=scheduling||input.match(/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|[hH](?![A-Za-z]))/)?.[0]||'';
+  const hours=scheduling||input.match(/(?:每天|每日)?\s*\d+(?:\.\d+)?\s*(?:小时|小時|(?:个|個)?[钟鐘]|[hH](?![A-Za-z]))/)?.[0]||'';
   const noteParts=[...pay.notes,...(buckets.notes||[])];
   const restMatch=input.match(/上\s*\d+\s*休\s*\d+|(?:月休|每月休息|休息)\s*\d+\s*天|每[周週]休\s*\d+\s*天|(?:^|[，,\s])休\s*\d+(?!\d)/m)?.[0]||'';
   o.hours=clauses(hours).map(part=>{

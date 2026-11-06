@@ -42,15 +42,36 @@ function recognitionFeedback(messages,multi=false,order=null){
 
 }
 function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||''}
+function beginRecognitionProgress(button){
+ if(!button||button.disabled)return null;
+ button.disabled=true;button.setAttribute('aria-busy','true');
+ let box=button.parentElement.querySelector('.recognition-progress');
+ if(!box){box=document.createElement('span');box.className='recognition-progress';box.setAttribute('role','status');box.innerHTML='<progress max="100" value="0" aria-label="整理进度"></progress><b class="recognition-percent">0%</b><span class="recognition-stage"></span><small>阶段进度，非模型计算百分比</small>';button.after(box)}
+ const bar=box.querySelector('progress'),percent=box.querySelector('b'),label=box.querySelector('.recognition-stage');
+ function update(value,text){if(!box.isConnected)return;bar.value=value;percent.textContent=value+'%';label.textContent=text}
+ update(5,'读取原单');
+ return {update,finish(text,complete=false){if(complete)update(100,text);else if(box.isConnected)label.textContent=text;button.disabled=false;button.removeAttribute('aria-busy')}};
+}
 window.autoParse=async function(){
- const element=$('#raw'),owner=sessionUser,formBefore=JSON.stringify(read(orderFields)),original=element.value,input=await simplify(original.trim());if(!input)return toast('请先粘贴原单');
- const result=await ZYAI.enhance(ZYOrderParser.analyze(input,code()));
- if(sessionUser!==owner||$('#raw')!==element)return;
- if(JSON.stringify(read(orderFields))!==formBefore||element.value!==original)return toast('表单已修改，未覆盖人工内容');
- if(!result.order){recognitionFeedback(result.warnings,true);return toast(result.warnings[0])}
- const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);order.firstRecognition=singleRecognitionMeta?.firstRecognition||(!editing?ZYRecognitionArchive.capture(original,order,result.warnings):'');singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
- recognitionFeedback(result.warnings,false,order);toast('整理完成，请核对各项信息');
+ const button=document.querySelector('button[onclick="autoParse()"]'),progress=beginRecognitionProgress(button);if(!progress)return;
+ let outcome='整理已停止',complete=false;
+ try{
+  const element=$('#raw'),owner=sessionUser,formBefore=JSON.stringify(read(orderFields)),original=element.value;
+  if(!original.trim()){outcome='请先粘贴原单';return toast(outcome)}
+  const input=await simplify(original.trim());progress.update(25,'规则识别');
+  const analysis=ZYOrderParser.analyze(input,code());
+  progress.update(40,'检查AI连接');
+  const result=await ZYAI.enhance(analysis,(value,text)=>progress.update(value,text));
+  progress.update(85,'核对识别结果');
+  if(sessionUser!==owner||$('#raw')!==element)return;
+  if(JSON.stringify(read(orderFields))!==formBefore||element.value!==original){outcome='表单已修改，未覆盖人工内容';return toast(outcome)}
+  if(!result.order){recognitionFeedback(result.warnings,true);outcome=result.warnings[0];return toast(outcome)}
+  const order=result.order;if(!order.sourcePrefix&&singleRecognitionMeta?.raw===order.raw){order.sourcePrefix=singleRecognitionMeta.sourcePrefix||'';order.code=ZYOrderParser.companyCode(order.code,order.sourcePrefix)}order.price=suggestion(order.salary);order.firstRecognition=singleRecognitionMeta?.firstRecognition||(!editing?ZYRecognitionArchive.capture(original,order,result.warnings):'');singleRecognitionMeta=order;$('#raw').value=order.raw;fillRecognisedFields(order);priceManual=false;
+  recognitionFeedback(result.warnings,false,order);outcome='整理完成，请核对各项信息';complete=true;toast(outcome);
+ }catch{outcome='整理未完成，请重试';toast(outcome)}
+ finally{progress.finish(outcome,complete)}
 };
+
 function moveSourceToBatch(){batchInput=ZYOrderParser.splitOrders($('#raw').value).join('\n---\n');batch=[];editing=null;mode='batch';newView();previewBatch()}
 async function reparseExistingOrder(){
  const owner=sessionUser,element=$('#raw'),formBefore=JSON.stringify(read(orderFields)),input=orders.find(o=>o.id===editing)?.raw||element.value,result=await ZYAI.enhance(ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:orders.find(o=>o.id===editing)?.boundaryMode==='explicit'}));

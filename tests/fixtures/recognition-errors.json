@@ -592,6 +592,26 @@
         "AS-HK0826",
         "3.7w"
       ]
+    },
+    {
+      "id": "REC-032",
+      "problem": "Cantonese clock-duration units were lost outside a conventional hours label.",
+      "rootCause": "Duration patterns only accepted hours and h, not 个钟/個鐘.",
+      "source": "职位：接待专员\n雇主：香港某服务中心\n月薪HK22400\n性别：女\n年龄：42岁以下\n每天8個鐘，月休5天\n工作内容：接待来访客户",
+      "expected": {
+        "title": "接待专员",
+        "salary": "HKD22400",
+        "gender": "女",
+        "age": "42岁以下"
+      },
+      "contains": {
+        "hours": [
+          "8個鐘"
+        ]
+      },
+      "forbidden": [
+        "22400h"
+      ]
     }
   ]
 }

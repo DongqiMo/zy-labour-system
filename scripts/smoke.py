@@ -251,7 +251,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='16'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='17'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
@@ -296,14 +296,22 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate("editing=null;mode='single';go('new');window.originalEnhance=ZYAI.enhance;ZYAI.enhance=analysis=>new Promise(resolve=>window.finishAI=()=>resolve(analysis));void 0")
             admin.locator('#raw').fill('岗位：测试协调专岗\n性别：女\n工资：HK21000')
             admin.evaluate('void autoParse()');admin.wait_for_function("typeof window.finishAI==='function'")
+            assert admin.locator('button[onclick="autoParse()"]').is_disabled()
+            assert admin.locator('.recognition-progress progress').get_attribute('value')=='40'
+            admin.evaluate('void autoParse()')
+            assert admin.locator('.recognition-progress').count()==1
             admin.locator('#o-title').fill('等待期间人工修改')
             admin.evaluate('finishAI()')
             assert admin.locator('#o-title').input_value()=='等待期间人工修改'
+            assert admin.locator('button[onclick="autoParse()"]').is_enabled()
+            assert admin.locator('.recognition-percent').inner_text()!='100%'
             admin.evaluate('ZYAI.enhance=window.originalEnhance;delete window.finishAI')
             # Freeze first machine fields before manual changes; persist and share that exact private snapshot.
             archive_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-024')
             admin.evaluate("editing=null;mode='single';go('new')")
             admin.locator('#raw').fill(archive_source);admin.evaluate('autoParse()')
+            assert admin.locator('.recognition-percent').inner_text()=='100%'
+            assert admin.locator('button[onclick="autoParse()"]').is_enabled()
             frozen=admin.evaluate('singleRecognitionMeta.firstRecognition')
             assert json.loads(frozen)['source']==archive_source
             assert json.loads(frozen)['company']['title']=='溶金师傅'

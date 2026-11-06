@@ -19,7 +19,7 @@
    if(!fact||!keys.includes(fact.field)||typeof fact.value!=='string'||typeof fact.evidence!=='string'||!fact.value.trim()||!source.includes(fact.evidence)||!fact.evidence.includes(fact.value)||fact.value.length>2000)throw new Error('AI返回内容缺少原文依据');
    if(P.sourceIdentifiers(fact.value).length||/底价|底價|全包|包价|包價|总价|總價|上家|劳务|勞務|办证|辦證|中介|保险另计|保險另計/.test(fact.evidence))continue;
    if(fact.field==='salary'&&!/工资|工資|月薪|薪资|薪資|薪酬|薪金|津贴|津貼|奖金|獎金|提成|花红|花紅|MOP|澳门元|澳門元|HKD|HK\$|HK|港币|港幣|港元|[$]/i.test(fact.evidence))continue;
-   if(['hours','rest'].includes(fact.field)&&!/[时時天日周週班休更hH]|\d{1,2}:\d{2}/.test(fact.value))continue;
+   if(['hours','rest'].includes(fact.field)&&!/[时時钟鐘天日周週班休更]|[hH](?![A-Za-z])|\d{1,2}:\d{2}/.test(fact.value))continue;
    if(fact.field==='interview'&&/^(?:具体|具體|详情|詳情|以上|仅供|僅供|以面试|以面試)/.test(fact.value)&&/(?:为准|為準|参考|參考)/.test(fact.value))continue;
    (grouped[fact.field]??=[]).push(fact.value);facts.push({field:fact.field,value:fact.value,evidence:fact.evidence});
   }
@@ -41,8 +41,9 @@
   order.parsedSnapshot=JSON.stringify(Object.fromEntries(['code',...keys,'price'].map(key=>[key,order[key]||''])));
   return {...analysis,order,warnings:[...new Set([...review.warnings,...warnings])],sources:review.sources,unclassified:review.unclassified,conflicts:review.conflicts,ledger:review.ledger};
  }
- async function enhance(analysis){
+ async function enhance(analysis,onProgress){
   if(!analysis.order||!await available())return analysis;
+  onProgress?.(45,'等待AI返回');
   try{return apply(analysis,await api('/api/recognize-order',{method:'POST',body:{source:analysis.order.raw}}))}
   catch{return {...analysis,warnings:[...analysis.warnings,'AI暂不可用，已保留规则识别结果']}}
  }

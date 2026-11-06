@@ -1,8 +1,60 @@
 {
   "privacy": "Synthetic examples only; no live orders or credentials.",
   "cases": [
-    {"id":"AI-001","problem":"Foreign-currency evidence must survive salary validation.","source":"薪金：MOP11320含房补","fact":{"field":"salary","value":"MOP11320含房补","evidence":"薪金：MOP11320含房补"},"accepted":true},
-    {"id":"AI-002","problem":"Supplier base prices must not be treated as salary.","source":"底价HK28000","fact":{"field":"salary","value":"HK28000","evidence":"底价HK28000"},"accepted":false},
-    {"id":"AI-003","problem":"An explicit employee allowance remains salary, not supplier fees.","source":"夜班津贴MOP760","fact":{"field":"salary","value":"MOP760","evidence":"夜班津贴MOP760"},"accepted":true}
+    {
+      "id": "AI-001",
+      "problem": "Foreign-currency evidence must survive salary validation.",
+      "source": "薪金：MOP11320含房补",
+      "fact": {
+        "field": "salary",
+        "value": "MOP11320含房补",
+        "evidence": "薪金：MOP11320含房补"
+      },
+      "accepted": true
+    },
+    {
+      "id": "AI-002",
+      "problem": "Supplier base prices must not be treated as salary.",
+      "source": "底价HK28000",
+      "fact": {
+        "field": "salary",
+        "value": "HK28000",
+        "evidence": "底价HK28000"
+      },
+      "accepted": false
+    },
+    {
+      "id": "AI-003",
+      "problem": "An explicit employee allowance remains salary, not supplier fees.",
+      "source": "夜班津贴MOP760",
+      "fact": {
+        "field": "salary",
+        "value": "MOP760",
+        "evidence": "夜班津贴MOP760"
+      },
+      "accepted": true
+    },
+    {
+      "id": "AI-004",
+      "problem": "Cantonese clock-duration units were rejected by the evidence gate.",
+      "source": "上班按正常8個鐘計，由僱主安排",
+      "fact": {
+        "field": "hours",
+        "value": "8個鐘",
+        "evidence": "上班按正常8個鐘計，由僱主安排"
+      },
+      "accepted": true
+    },
+    {
+      "id": "AI-005",
+      "problem": "A compact currency suffix must not qualify an amount as hours.",
+      "source": "月薪24000hk",
+      "fact": {
+        "field": "hours",
+        "value": "24000hk",
+        "evidence": "月薪24000hk"
+      },
+      "accepted": false
+    }
   ]
 }

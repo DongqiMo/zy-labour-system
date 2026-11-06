@@ -25,3 +25,5 @@ const response={provider:'deepseek',model:'deepseek-flash',facts:[{field:'title'
 const fixed=ZYAI.apply(repair,response);assert.equal(fixed.order.title,'专职司机');assert.equal(fixed.order.employer,'海港家庭');assert.equal(fixed.order.workContent,'接送家庭成员');assert.equal(fixed.order.interview,'');assert.equal(repair.order.title,'AS-');assert.equal(fixed.order.code,repair.order.code);
 for(const protection of [{id:'saved'},{humanReviewedSource:P.reviewSignature(repairRaw)},{manualFields:'["title"]'}]){const protectedAnalysis={...repair,order:{...repair.order,...protection}};assert.equal(ZYAI.apply(protectedAnalysis,response),protectedAnalysis);}
 assert.equal(P.sourcePrefix('AS-HK0826'),'AS');assert.equal(P.sourceIdentifiers('HKD22300').length,0);
+
+const clockRaw='职位：协调专员\n性别：女\n月薪HK22400\n上班时间按正常8个钟计，由雇主安排';const clockAnalysis=P.analyze(clockRaw,'ZY-26-1106-89');clockAnalysis.order.hours='';const clock=ZYAI.apply(clockAnalysis,{provider:'deepseek',model:'deepseek-flash',facts:[{field:'hours',value:'8个钟',evidence:'上班时间按正常8个钟计，由雇主安排'}]});assert.equal(clock.order.hours,'8个钟');

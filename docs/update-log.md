@@ -1,3 +1,10 @@
+## Recognition stage progress and Cantonese duration units (parser v17)
+
+- Added a percentage/progress indicator beside the single-entry Auto Organise button, with reading, rule extraction, AI connection/waiting, checking and completion states. Percentages describe stages, not measured model computation, and do not advance on a timer.
+- Disabled repeated clicks during requests; restored the button on success, failure or discarded late results. Concurrent human edits remain intact and discarded operations never display 100 percent.
+- Recognised Cantonese 个钟/個鐘 durations in offline rules and both AI evidence gates. Currency suffixes such as synthetic `24000hk` do not qualify as hour units.
+- Added synthetic duration/currency counterexamples and browser progress/duplicate-click/manual-edit checks. Hosted `validation.ts` must also be updated for the server-side duration gate; frontend and rule changes deploy through Pages.
+
 ## Fresh-draft AI precedence and compound supplier identifiers (parser v16)
 
 - Fixed AI assistance only filling empty fields: validated literal facts now replace incorrect populated rule guesses in fresh machine drafts, while differences remain visible for review.
