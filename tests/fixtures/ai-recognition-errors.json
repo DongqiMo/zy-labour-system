@@ -1,0 +1,8 @@
+{
+  "privacy": "Synthetic examples only; no live orders or credentials.",
+  "cases": [
+    {"id":"AI-001","problem":"Foreign-currency evidence must survive salary validation.","source":"薪金：MOP11320含房补","fact":{"field":"salary","value":"MOP11320含房补","evidence":"薪金：MOP11320含房补"},"accepted":true},
+    {"id":"AI-002","problem":"Supplier base prices must not be treated as salary.","source":"底价HK28000","fact":{"field":"salary","value":"HK28000","evidence":"底价HK28000"},"accepted":false},
+    {"id":"AI-003","problem":"An explicit employee allowance remains salary, not supplier fees.","source":"夜班津贴MOP760","fact":{"field":"salary","value":"MOP760","evidence":"夜班津贴MOP760"},"accepted":true}
+  ]
+}

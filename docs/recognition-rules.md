@@ -4,7 +4,7 @@ This is the durable implementation contract. It describes the current shared sys
 
 ## Pipeline and ownership
 
-The shared deterministic rule engine is `dist/order-parser.js`. Single entry, batch entry, re-recognition previews, source review, and publication validation call this engine. It is a deterministic, offline-capable JavaScript rule engine, not an externally trained model or an autonomous learning service. Improvements are deliberate code/rule changes tested against the catalog. Optional Gemini assistance is separately authorised and documented below; no other external model integration is enabled.
+The shared deterministic rule engine is `dist/order-parser.js`. Single entry, batch entry, re-recognition previews, source review, and publication validation call this engine. It is a deterministic, offline-capable JavaScript rule engine, not an externally trained model or an autonomous learning service. Improvements are deliberate code/rule changes tested against the catalog. Optional Gemini or DeepSeek assistance is separately configured and documented below; neither provider is enabled by a source-code deployment alone.
 
 1. In batch entry, staff-provided standalone `---` (or the existing explicit separator aliases) defines each document; never infer additional documents inside a supplied segment. Retain single-entry detection of multiple coherent role/pay blocks as a guard. Boundary metadata is private and retained on save/re-recognition.
 2. Build logical source units and UTF-16 spans, recovering inline and wrapped labels without deleting unknown text.
@@ -116,3 +116,7 @@ These snapshots are workflow records, not tamper-proof evidence. No unattended A
 Assistance fills absent fields. Conflicting populated identity/pay/age values stay unchanged and require review. Source provenance, original rule unknowns, fee filtering, human review and fixed three-value gender remain in force. Late responses do not replace concurrent manual edits. No worker data, background audits, bulk database exports or automatic business writes go to Google. Disabled/missing/unavailable AI retains rules. First-machine snapshots record the actual provider/model and are never rewritten when AI is later enabled.
 
 SQL, transport and model boundaries have mocked tests; live account/model setup and real recognition quality still need verification. See [Gemini setup](gemini-setup.md). No automatic learning or autonomous rule deployment occurs.
+
+## Optional DeepSeek provider
+
+The same authenticated assistance contract also supports DeepSeek, selected explicitly by server secrets. It uses fixed allowlisted literal facts, existing quota reservations and first-machine metadata. Truncated completion output is rejected; reasoning shares the 8192-token cap. Existing populated fields and manual ownership remain authoritative. See [DeepSeek setup](deepseek-setup.md) for deployment, activation and limitations. The local test prompt differs from this extractive production prompt; live acceptance remains required.

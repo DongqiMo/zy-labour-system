@@ -11,3 +11,9 @@ assert.throws(()=>ZYAI.apply(analysis,{provider:'gemini',model:'test',facts:[{fi
 globalThis.ZY_CONFIG={provider:'sqlite'};assert.equal(await ZYAI.enhance(analysis),analysis);
 globalThis.ZY_CONFIG={provider:'supabase'};globalThis.api=async(path)=>path==='/api/recognition-status'?{enabled:true}:Promise.reject(new Error('unavailable'));ZYAI.reset();const fallback=await ZYAI.enhance(analysis);assert.equal(fallback.order,analysis.order);assert(fallback.warnings.some(w=>w.includes('保留规则')));
 console.log('PASS: optional AI assistance, literal facts, immutable rule baseline, privacy constraints, model-tagged first snapshots and offline/failure fallback');
+
+const ds=ZYAI.apply(analysis,{provider:'deepseek',model:'deepseek-flash',facts:[{field:'employer',value:'某院舍',evidence:'某院舍'}]});
+assert.equal(ds.order.aiProvider,'deepseek');assert.equal(ds.order.code,analysis.order.code);
+assert.equal(JSON.parse(ZYRecognitionArchive.capture(raw,ds.order)).provider,'deepseek');
+const foreign=validateForeign();function validateForeign(){const a=P.analyze('岗位：照护助理\n薪资：MOP11200含房补\n性别：女','ZY-26-1106-99');a.order.salary='';return ZYAI.apply(a,{provider:'deepseek',model:'deepseek-flash',facts:[{field:'salary',value:'MOP11200含房补',evidence:'薪资：MOP11200含房补'}]});}
+assert(foreign.order.salary.includes('MOP11200'));

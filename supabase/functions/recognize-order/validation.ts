@@ -13,8 +13,8 @@ export function validateFacts(data:any,source:string){
   if(!fact||!fields.includes(fact.field)||typeof fact.value!=='string'||typeof fact.evidence!=='string')throw new Error('Invalid fact');
   const {field,value,evidence}=fact;
   if(!value.trim()||value.length>2000||!evidence.trim()||evidence.length>5000||!source.includes(evidence)||!evidence.includes(value)||/\[.*已隐藏\]/.test(value))throw new Error('Unsupported source value');
-  if(/全包|包价|包價|总价|總價|上家|劳务|勞務|办证|辦證|中介|保险另计|保險另計/.test(evidence))continue;
-  if(field==='salary'&&!/工资|工資|月薪|薪资|薪資|薪酬|薪金|津贴|津貼|奖金|獎金|提成|花红|花紅|HKD|HK\$|HK|港币|港幣|港元|[$]/i.test(evidence))continue;
+  if(/底价|底價|全包|包价|包價|总价|總價|上家|劳务|勞務|办证|辦證|中介|保险另计|保險另計/.test(evidence))continue;
+  if(field==='salary'&&!/工资|工資|月薪|薪资|薪資|薪酬|薪金|津贴|津貼|奖金|獎金|提成|花红|花紅|MOP|澳门元|澳門元|HKD|HK\$|HK|港币|港幣|港元|[$]/i.test(evidence))continue;
   if(['hours','rest'].includes(field)&&!/[时時天日周週班休更hH]|\d{1,2}:\d{2}/.test(value))continue;
   if(!output.some(f=>f.field===field&&f.value===value&&f.evidence===evidence))output.push({field,value,evidence});
  }

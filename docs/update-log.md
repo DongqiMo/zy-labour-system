@@ -1,3 +1,10 @@
+## Optional DeepSeek recognition provider
+
+- Added server-selected DeepSeek support to the existing authenticated Edge Function; API credentials remain server-only, using the existing atomic request quotas and source masking.
+- Added an 8192-token completion ceiling, explicit truncation rejection, no automatic retry and a 90-second upstream timeout.
+- Allowed DeepSeek facts through the same source-evidence checks, manual-preserving merge and provider-tagged first-machine archive. Preserved explicit MOP salary evidence and blocked supplier base-price evidence.
+- Added mocked provider/format/failure tests and deployment instructions. Hosted activation and real production-prompt acceptance remain owner setup steps; local API trials are not claimed as live website validation.
+
 ## Optional Gemini assistance (rule parser v15)
 
 - Added a separately enabled Supabase Edge Function with active-member Auth checks, CORS, a fixed structured extraction prompt/schema, literal source validation, contact/identity masking and server-only key handling.
