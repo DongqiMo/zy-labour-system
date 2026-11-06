@@ -1,3 +1,9 @@
+## Smooth recognition waiting animation
+
+- Replaced stage jumps with a slow, CSS-interpolated waiting animation capped below completion. The displayed percentage is explicitly simulated; only an applied result reaches 100 percent.
+- Stopped animation on success, failure, discarded late responses and detached views. Retained duplicate-click prevention, human-edit ownership and reduced-motion support.
+- Updated browser acceptance to verify movement while a mocked AI call is pending and completion only after successful application.
+
 ## Recognition stage progress and Cantonese duration units (parser v17)
 
 - Added a percentage/progress indicator beside the single-entry Auto Organise button, with reading, rule extraction, AI connection/waiting, checking and completion states. Percentages describe stages, not measured model computation, and do not advance on a timer.

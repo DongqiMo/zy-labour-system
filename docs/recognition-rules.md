@@ -123,4 +123,4 @@ The same authenticated assistance contract also supports DeepSeek, selected expl
 
 ## Recognition progress
 
-Single-entry Auto Organise exposes stage percentages next to its button. Waiting for the external provider stays at a fixed stage until a response arrives; this is not token or time-based progress. Repeated clicks are disabled. Success reaches 100 percent only after the result is applied; failures and late results discarded after user edits do not claim completion. Both rule and AI duration checks accept Cantonese 个钟/個鐘 units without treating currency suffixes as hours.
+Single-entry Auto Organise shows a smooth simulated waiting percentage, explicitly labelled as animation rather than actual model progress. A bounded timer eases toward 95 percent while waiting; only an applied result reaches 100. Success, failure, discarded late results and detached views stop the timer. Repeated clicks stay disabled during requests. Reduced-motion preferences disable visual transitions. Both rule and AI duration checks accept Cantonese 个钟/個鐘 units without treating currency suffixes as hours.

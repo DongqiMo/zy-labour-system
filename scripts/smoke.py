@@ -297,7 +297,9 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('#raw').fill('岗位：测试协调专岗\n性别：女\n工资：HK21000')
             admin.evaluate('void autoParse()');admin.wait_for_function("typeof window.finishAI==='function'")
             assert admin.locator('button[onclick="autoParse()"]').is_disabled()
-            assert admin.locator('.recognition-progress progress').get_attribute('value')=='40'
+            initial_progress=int(admin.locator('.recognition-track').get_attribute('aria-valuenow'))
+            admin.wait_for_function("initial => Number(document.querySelector('.recognition-track').getAttribute('aria-valuenow')) > initial", arg=initial_progress)
+            assert int(admin.locator('.recognition-track').get_attribute('aria-valuenow'))<100
             admin.evaluate('void autoParse()')
             assert admin.locator('.recognition-progress').count()==1
             admin.locator('#o-title').fill('等待期间人工修改')

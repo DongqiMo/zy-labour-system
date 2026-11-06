@@ -46,12 +46,14 @@ function beginRecognitionProgress(button){
  if(!button||button.disabled)return null;
  button.disabled=true;button.setAttribute('aria-busy','true');
  let box=button.parentElement.querySelector('.recognition-progress');
- if(!box){box=document.createElement('span');box.className='recognition-progress';box.setAttribute('role','status');box.innerHTML='<progress max="100" value="0" aria-label="整理进度"></progress><b class="recognition-percent">0%</b><span class="recognition-stage"></span><small>阶段进度，非模型计算百分比</small>';button.after(box)}
- const bar=box.querySelector('progress'),percent=box.querySelector('b'),label=box.querySelector('.recognition-stage');
- function update(value,text){if(!box.isConnected)return;bar.value=value;percent.textContent=value+'%';label.textContent=text}
- update(5,'读取原单');
- return {update,finish(text,complete=false){if(complete)update(100,text);else if(box.isConnected)label.textContent=text;button.disabled=false;button.removeAttribute('aria-busy')}};
+ if(!box){box=document.createElement('span');box.className='recognition-progress';box.setAttribute('role','status');box.innerHTML='<span class="recognition-track" role="progressbar" aria-label="整理进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="recognition-fill"></span></span><b class="recognition-percent">0%</b><span class="recognition-stage"></span><small>等待动画，非实际处理百分比</small>';button.after(box)}
+ const bar=box.querySelector('[role="progressbar"]'),fill=box.querySelector('.recognition-fill'),percent=box.querySelector('b'),label=box.querySelector('.recognition-stage');
+ function paint(value){fill.style.transform='scaleX('+(value/100)+')';const rounded=Math.floor(value);bar.setAttribute('aria-valuenow',String(rounded));const text=rounded+'%';if(percent.textContent!==text)percent.textContent=text}
+ const started=performance.now();paint(5);label.textContent='正在整理，请稍候';
+ const timer=setInterval(()=>{if(!box.isConnected){clearInterval(timer);return}paint(Math.min(95,5+90*(1-Math.exp(-(performance.now()-started)/35000))))},350);
+ return {update(){},finish(text,complete=false){clearInterval(timer);if(box.isConnected){if(complete)paint(100);label.textContent=text}button.disabled=false;button.removeAttribute('aria-busy')}};
 }
+
 window.autoParse=async function(){
  const button=document.querySelector('button[onclick="autoParse()"]'),progress=beginRecognitionProgress(button);if(!progress)return;
  let outcome='整理已停止',complete=false;
