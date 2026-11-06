@@ -10,12 +10,17 @@
  }
  function apply(analysis,response){
   const P=root.ZYOrderParser,source=analysis.order?.raw;if(!source||!response||!['gemini','deepseek'].includes(response.provider)||typeof response.model!=='string'||!Array.isArray(response.facts)||response.facts.length>60)return analysis;
+  // Only fresh machine drafts may be merged; persisted/manual records require a new explicit preview.
+  if(analysis.order.id||analysis.order.humanReviewedSource||P.isHumanReviewed(analysis.order))return analysis;
+  let manual=[];try{manual=JSON.parse(analysis.order.manualFields||'[]')}catch{}
+  if(Array.isArray(manual)&&manual.length)return analysis;
   const grouped={},facts=[];
   for(const fact of response.facts){
    if(!fact||!keys.includes(fact.field)||typeof fact.value!=='string'||typeof fact.evidence!=='string'||!fact.value.trim()||!source.includes(fact.evidence)||!fact.evidence.includes(fact.value)||fact.value.length>2000)throw new Error('AI返回内容缺少原文依据');
    if(P.sourceIdentifiers(fact.value).length||/底价|底價|全包|包价|包價|总价|總價|上家|劳务|勞務|办证|辦證|中介|保险另计|保險另計/.test(fact.evidence))continue;
    if(fact.field==='salary'&&!/工资|工資|月薪|薪资|薪資|薪酬|薪金|津贴|津貼|奖金|獎金|提成|花红|花紅|MOP|澳门元|澳門元|HKD|HK\$|HK|港币|港幣|港元|[$]/i.test(fact.evidence))continue;
    if(['hours','rest'].includes(fact.field)&&!/[时時天日周週班休更hH]|\d{1,2}:\d{2}/.test(fact.value))continue;
+   if(fact.field==='interview'&&/^(?:具体|具體|详情|詳情|以上|仅供|僅供|以面试|以面試)/.test(fact.value)&&/(?:为准|為準|参考|參考)/.test(fact.value))continue;
    (grouped[fact.field]??=[]).push(fact.value);facts.push({field:fact.field,value:fact.value,evidence:fact.evidence});
   }
   let order={...analysis.order},warnings=[];
@@ -24,9 +29,10 @@
    const values=[...new Set(items)];
    if(['title','employer','age','gender'].includes(key)&&values.length>1){warnings.push('AI与规则结果有差异，请核对原文');continue;}
    const value=values.join('；'),existing=order[key]||'';
-   if(!existing){order[key]=key==='gender'?P.normalizeGender(value):value;continue;}
-   if(['title','employer','salary','gender','age'].includes(key)&&normal(key,existing)!==normal(key,value))warnings.push('AI与规则结果有差异，请核对原文');
+   if(existing&&['title','employer','salary','gender','age'].includes(key)&&normal(key,existing)!==normal(key,value))warnings.push('已采用AI原文识别结果，与规则有差异，请核对');
+   order[key]=key==='gender'?P.normalizeGender(value):value;
   }
+  if(!grouped.interview&&/(?:具体|具體|详情|詳情|以面试|以面試).*(?:为准|為準)/.test(order.interview||''))order.interview='';
   order=P.sanitizeCompany(order);order.salary=P.formatCompanySalary(order.salary);
   // Fixed code/source/price are never supplied or changed by AI.
   order.code=analysis.order.code;order.raw=source;order.price=analysis.order.price;

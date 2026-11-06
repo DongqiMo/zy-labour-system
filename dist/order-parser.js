@@ -1,13 +1,13 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
- const VERSION='15';
+ const VERSION='16';
  const recognitionText=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g,' ');
  const stripDecoration=s=>String(s??'').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]/gu,'').replace(/\[(?:红包|紅包|烟花|煙花|玫瑰|庆祝|慶祝|强|強)\]/g,'');
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const cleanBrackets=s=>recognitionText(stripDecoration(s)).replace(/[【】\[\]［］〔〕「」『』]/g,'').trim();
  const stripOrdinal=s=>recognitionText(stripDecoration(s)).replace(/^[\s·•●▪▫◦‣∙➤►★☆🔥💰💵📌✅👉🔹🔸]+/u,'').replace(/^\s*[-–—]\s+(?!\d+(?:\.\d+)?\s*(?:度|℃|°C))/,'').replace(/^\s*(?:[（(]\d+[）)]\s*|\d+(?:[、)）]|[.．](?!\d))\s*|[一二三四五六七八九十]+[、.．)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*)/,'').trim();
  const ignoredPrefixes=new Set(['HK','HKD','USD','RMB','CNY','MOP','CAD','EUR','GBP','AUD','ISO','CET','HACCP']);
- const idPattern=/(^|[^A-Za-z0-9])((?:ZY-\d{2}-\d{4}-\d{2,})|(?:[A-Za-z]+[-_]\d{4,}(?:[-_.]\d+)*)|(?:(?:XR|AT|QY)[-_]?\d{3,}(?:[-_]\d+)*)|(?:[A-Za-z]+\d{6,}))(?=HK(?=[\u3400-\u9fff])|[^A-Za-z0-9]|$)/g;
+ const idPattern=/(^|[^A-Za-z0-9])((?:ZY-\d{2}-\d{4}-\d{2,})|(?:[A-Za-z]+[-_](?:[A-Za-z]+[-_]?)?\d{4,}(?:[-_.]\d+)*)|(?:(?:XR|AT|QY)[-_]?\d{3,}(?:[-_]\d+)*)|(?:[A-Za-z]+\d{6,}))(?=HK(?=[\u3400-\u9fff])|[^A-Za-z0-9]|$)/g;
  function sourceIdentifiers(input){
   const found=[];for(const match of String(input??'').matchAll(idPattern)){
    const prefix=match[2].match(/^[A-Za-z]+/)[0].toUpperCase();if(ignoredPrefixes.has(prefix))continue;
@@ -71,6 +71,7 @@
   return explicit||jobWords.test(text)?text:'';
  }
  function roleHeader(line){
+  if(!sanitizeRaw(line).trim())return '';
   const tagged=matchLabel(line);if(tagged)return tagged.key==='title'&&!requirementDescription(tagged.value)?titleValue(tagged.value,true):'';
   const text=stripOrdinal(line);if(/^[（(]|职责|職責|工作要求|工作内容|工作內容|负责|負責|经验|經驗|需有/.test(text))return '';
   const recruited=text.match(/^(.*?)\s*(?:急招|招聘|诚聘|誠聘|招工)\s*[:：]?\s*(.+)$/);
@@ -78,7 +79,7 @@
   const compact=rolePay(text);if(compact?.title)return compact.title;
   return titleValue(text);
  }
- function salaryLine(line){const label=matchLabel(line);return label?.key==='salary'||!!rolePay(line)||(!label&&/(?:月薪|工资|工資|薪金|薪资|薪資|薪酬)\s*[:：]?\s*(?:[$￥¥]|HKD|港币|港幣|\d)/i.test(line))}
+ function salaryLine(line){if(!sanitizeRaw(line).trim())return false;const label=matchLabel(line);return label?.key==='salary'||!!rolePay(line)||(!label&&/(?:月薪|工资|工資|薪金|薪资|薪資|薪酬)\s*[:：]?\s*(?:[$￥¥]|HKD|港币|港幣|\d)/i.test(line))}
  function splitBatchOrders(input){return String(input??'').replace(/\r\n?/g,'\n').split(/\n\s*(?:[-_=*]{3,}|下一[单份]|第\s*[\d一二三四五六七八九十]+\s*[单份])\s*(?:\n|$)/).map(s=>s.trim()).filter(Boolean)}
  function splitOrders(input){
   const explicit=splitBatchOrders(input);

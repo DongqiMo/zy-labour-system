@@ -575,6 +575,23 @@
           "6天9小时"
         ]
       }
+    },
+    {
+      "id": "REC-031",
+      "problem": "Supplier IDs containing a second alphabetic component became a role and a false wage.",
+      "rootCause": "The source ID pattern only allowed digits immediately after the first hyphen.",
+      "source": "AS-HK0826\n职位：私人司机\n雇主：香港某家庭\n月薪HK22300\n性别：男\n年龄：44岁以下\n工作时间：9小时\n工作内容：接送家庭成员\n费用：3.7w办证保险另计",
+      "expected": {
+        "title": "私人司机",
+        "employer": "香港某家庭",
+        "salary": "HKD22300",
+        "gender": "男",
+        "age": "44岁以下"
+      },
+      "forbidden": [
+        "AS-HK0826",
+        "3.7w"
+      ]
     }
   ]
 }

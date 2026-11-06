@@ -17,3 +17,11 @@ assert.equal(ds.order.aiProvider,'deepseek');assert.equal(ds.order.code,analysis
 assert.equal(JSON.parse(ZYRecognitionArchive.capture(raw,ds.order)).provider,'deepseek');
 const foreign=validateForeign();function validateForeign(){const a=P.analyze('岗位：照护助理\n薪资：MOP11200含房补\n性别：女','ZY-26-1106-99');a.order.salary='';return ZYAI.apply(a,{provider:'deepseek',model:'deepseek-flash',facts:[{field:'salary',value:'MOP11200含房补',evidence:'薪资：MOP11200含房补'}]});}
 assert(foreign.order.salary.includes('MOP11200'));
+
+// Synthetic counterexample: a wrong populated machine draft is not a human edit.
+const repairRaw='雇主：海港家庭\n职位：专职司机\n月薪HK22300\n性别：男\n年龄：44岁以下\n工作内容：接送家庭成员';
+const repair=P.analyze(repairRaw,'ZY-26-1106-88');repair.order.title='AS-';repair.order.employer='家庭成员';repair.order.interview='具体以面试为准';repair.order.workContent='接送';
+const response={provider:'deepseek',model:'deepseek-flash',facts:[{field:'title',value:'专职司机',evidence:'职位：专职司机'},{field:'employer',value:'海港家庭',evidence:'雇主：海港家庭'},{field:'workContent',value:'接送家庭成员',evidence:'工作内容：接送家庭成员'}]};
+const fixed=ZYAI.apply(repair,response);assert.equal(fixed.order.title,'专职司机');assert.equal(fixed.order.employer,'海港家庭');assert.equal(fixed.order.workContent,'接送家庭成员');assert.equal(fixed.order.interview,'');assert.equal(repair.order.title,'AS-');assert.equal(fixed.order.code,repair.order.code);
+for(const protection of [{id:'saved'},{humanReviewedSource:P.reviewSignature(repairRaw)},{manualFields:'["title"]'}]){const protectedAnalysis={...repair,order:{...repair.order,...protection}};assert.equal(ZYAI.apply(protectedAnalysis,response),protectedAnalysis);}
+assert.equal(P.sourcePrefix('AS-HK0826'),'AS');assert.equal(P.sourceIdentifiers('HKD22300').length,0);

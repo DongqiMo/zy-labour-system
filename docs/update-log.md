@@ -1,3 +1,11 @@
+## Fresh-draft AI precedence and compound supplier identifiers (parser v16)
+
+- Fixed AI assistance only filling empty fields: validated literal facts now replace incorrect populated rule guesses in fresh machine drafts, while differences remain visible for review.
+- Guarded persisted and human/manual-marked records against in-place AI merging. Existing async form ownership checks and explicit preview/save remain in force.
+- Recognised compound supplier identifiers such as synthetic `AS-HK0826`, preserving the supplier prefix without treating identifier digits as wages or its letters as a job.
+- Suppressed generic interview disclaimers in assisted drafts. Retained rule review warnings rather than claiming all unclassified source fragments are resolved.
+- Added synthetic regression and nearby currency/manual-ownership counterexamples. No live order sources entered the public repository.
+
 ## Optional DeepSeek recognition provider
 
 - Added server-selected DeepSeek support to the existing authenticated Edge Function; API credentials remain server-only, using the existing atomic request quotas and source masking.

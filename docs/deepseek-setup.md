@@ -19,7 +19,7 @@ Deploy the function before enabling. Gemini secrets may remain, but only the sel
 
 ## Operation and limitations
 
-Explicit single, batch and re-recognition actions use the shared assistance path. Existing populated fields remain authoritative; different identity/pay/age candidates require review. Missing fields can be filled from literal evidence. Pending responses cannot replace concurrent edits. Saved human-reviewed records are not bulk rewritten, and supplier suffixes are never restored by the model.
+Explicit single, batch and re-recognition actions use the shared assistance path. Validated literal AI facts take precedence over rule guesses in fresh machine drafts, with identity/pay/age disagreements flagged. Persisted/manual/human-reviewed records are guarded against in-place merging. Existing-order re-recognition still requires explicit preview/save. Pending responses cannot replace concurrent edits. Saved human-reviewed records are not bulk rewritten, and supplier suffixes are never restored by the model.
 
 Only the current source, after recognised contact/identity masking, is sent to DeepSeek. This masking is not comprehensive anonymisation. The model returns allowlisted literal facts; the application formats salary and retains foreign currencies. Code and company package price are not model-controlled. First-machine snapshots retain actual provider/model metadata when the business order is saved.
 

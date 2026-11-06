@@ -251,7 +251,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
-            assert reviewed['raw']==unknown and reviewed['parserVersion']=='15'
+            assert reviewed['raw']==unknown and reviewed['parserVersion']=='16'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
