@@ -612,6 +612,23 @@
       "forbidden": [
         "22400h"
       ]
+    },
+    {
+      "id": "REC-033",
+      "problem": "A staff-submitted single document was rejected before AI because its footer repeated the supplier ID and role.",
+      "rootCause": "Single-entry UI used heuristic multi-document splitting instead of honoring the selected entry mode.",
+      "source": "香港某餐饮集团\n【职位编号】BV1086241\n【职位名称】点心制作员\n【薪酬待遇】HKD18300-21500+加班费\n【职位要求】男女不限，22-46岁\n【工作时间】每天9H\n第三方费用2.18w办证保险\nBV1086241 香港某餐饮集团 点心制作员 0",
+      "options": {
+        "explicitBoundary": true
+      },
+      "expected": {
+        "title": "点心制作员",
+        "gender": "男女不限"
+      },
+      "forbidden": [
+        "BV1086241",
+        "2.18w"
+      ]
     }
   ]
 }

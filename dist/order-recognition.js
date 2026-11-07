@@ -61,7 +61,7 @@ window.autoParse=async function(){
   const element=$('#raw'),owner=sessionUser,formBefore=JSON.stringify(read(orderFields)),original=element.value;
   if(!original.trim()){outcome='请先粘贴原单';return toast(outcome)}
   const input=await simplify(original.trim());progress.update(25,'规则识别');
-  const analysis=ZYOrderParser.analyze(input,code());
+  const analysis=ZYOrderParser.analyze(input,code(),{explicitBoundary:true});
   progress.update(40,'检查AI连接');
   const result=await ZYAI.enhance(analysis,(value,text)=>progress.update(value,text));
   progress.update(85,'核对识别结果');
@@ -76,7 +76,7 @@ window.autoParse=async function(){
 
 function moveSourceToBatch(){batchInput=ZYOrderParser.splitOrders($('#raw').value).join('\n---\n');batch=[];editing=null;mode='batch';newView();previewBatch()}
 async function reparseExistingOrder(){
- const owner=sessionUser,element=$('#raw'),formBefore=JSON.stringify(read(orderFields)),input=orders.find(o=>o.id===editing)?.raw||element.value,result=await ZYAI.enhance(ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:orders.find(o=>o.id===editing)?.boundaryMode==='explicit'}));
+ const owner=sessionUser,element=$('#raw'),formBefore=JSON.stringify(read(orderFields)),input=orders.find(o=>o.id===editing)?.raw||element.value,result=await ZYAI.enhance(ZYOrderParser.analyze(input,$('#o-code').value,{explicitBoundary:true}));
  if(sessionUser!==owner||$('#raw')!==element)return;
  if(JSON.stringify(read(orderFields))!==formBefore)return toast('表单已修改，未覆盖人工内容');
  if(!result.order){recognitionFeedback(result.warnings,true);return}
@@ -99,7 +99,7 @@ window.saveOrder=async function(){
  const candidate=ZYOrderParser.sanitizeCompany({...data,boundaryMode:oldRecord?.boundaryMode||singleRecognitionMeta?.boundaryMode||'',sourcePrefix:origin,raw:oldRecord?.raw??ZYOrderParser.sanitizeRaw(input)});
  candidate.salary=ZYOrderParser.formatCompanySalary(candidate.salary);
  if(editing)Object.assign(candidate,ZYOrderParser.humanReviewMetadata(candidate,sessionUser?.username));
- const problems=ZYOrderParser.validateCompany(candidate,!!editing);if(problems.length){recognitionFeedback(problems,ZYOrderParser.splitOrders(input).length>1);return toast(problems[0])}
+ const problems=ZYOrderParser.validateCompany(candidate,!!editing);if(problems.length){recognitionFeedback(problems,candidate.boundaryMode!=='explicit'&&ZYOrderParser.splitOrders(input).length>1);return toast(problems[0])}
  if(orders.some(o=>o.id!==editing&&ZYOrderParser.baseCode(o.code)===ZYOrderParser.baseCode(candidate.code)))return toast('公司单号已存在，请修改');
  const baseline=singleRecognitionMeta?.parsedSnapshot&&ZYOrderParser.sanitizeRaw(singleRecognitionMeta.raw||'')===ZYOrderParser.sanitizeRaw(input)?singleRecognitionMeta:ZYOrderParser.parse(input,candidate.code);
  const metadata=recognitionMetadata(candidate,{...baseline,firstRecognition:oldRecord?.firstRecognition||singleRecognitionMeta?.firstRecognition||'',reviewConfirmation:singleRecognitionMeta?.reviewConfirmation||''});

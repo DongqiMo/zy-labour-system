@@ -14,7 +14,7 @@ function coverage(result){
  for(let i=0;i<raw.length;i++)if(!/[\s，,；;。]/.test(raw[i]))assert(covered[i],`Unaccounted character at ${i}: ${raw.slice(i,i+12)}`);
 }
 for(const fixture of catalog.cases){
- const result=P.analyze(fixture.source,'ZY-26-1103-90');assert(result.order,fixture.id);if(fixture.savedRecord){const saved={...result.order,...fixture.savedRecord};assert.equal(P.isHumanReviewed(saved),fixture.expectedReviewed,fixture.id);assert.deepEqual(P.validateCompany(saved,true),[]);}
+ const result=P.analyze(fixture.source,'ZY-26-1103-90',fixture.options||{});assert(result.order,fixture.id);if(fixture.savedRecord){const saved={...result.order,...fixture.savedRecord};assert.equal(P.isHumanReviewed(saved),fixture.expectedReviewed,fixture.id);assert.deepEqual(P.validateCompany(saved,true),[]);}
  const view=P.present(result.order);
  for(const [key,value]of Object.entries(fixture.expected||{}))assert.equal(view[key],value,fixture.id+' '+key);
  for(const [key,values]of Object.entries(fixture.contains||{}))for(const value of values)assert(view[key].includes(value),fixture.id+' '+key+' missing '+value);
@@ -110,5 +110,9 @@ const editedArchive={...firstOrder,firstRecognition,title:'人工修改的职位
 const archiveReport=ZYRecognitionArchive.report([editedArchive,{id:'old',raw:'旧原单',title:'人工旧职位',salary:'HKD39999'}]);
 assert.equal(archiveReport.captured,1);assert.equal(archiveReport.notRecorded,1);assert.equal(archiveReport.records[0].company.title,first.company.title);assert.equal(archiveReport.records[1].company,null);
 assert(!JSON.stringify(archiveReport).includes('人工修改的职位'));assert(!JSON.stringify(archiveReport).includes('29999'));assert(!JSON.stringify(archiveReport).includes('仅限业务的人工内容'));assert(!JSON.stringify(archiveReport).includes('人工旧职位'));assert.equal(editedArchive.firstRecognition,firstRecognition);
-for(const fixture of catalog.cases.filter(f=>['REC-023','REC-024','REC-025','REC-026','REC-030'].includes(f.id))){const r=P.analyze(fixture.source,'ZY-26-1103-90');assert(!r.warnings.some(w=>w.includes('性别不明确')));assert(r.sources.gender?.length);if(r.order.age)assert(r.sources.age?.length);}
+for(const fixture of catalog.cases.filter(f=>['REC-023','REC-024','REC-025','REC-026','REC-030'].includes(f.id))){const r=P.analyze(fixture.source,'ZY-26-1103-90',fixture.options||{});assert(!r.warnings.some(w=>w.includes('性别不明确')));assert(r.sources.gender?.length);if(r.order.age)assert(r.sources.age?.length);}
 console.log('PASS: report-derived regressions, source-tracked demographics and first-machine-only export with legacy gaps');
+
+// Entry mode owns document boundaries: repeated reference/footer is one submitted document.
+const repeatedFooter='香港某餐饮集团\n【职位编号】BV1086241\n【职位名称】点心制作员\n【薪酬待遇】HKD18300-21500+加班费\n【工作时间】每周6天，每天9H\n【职位要求】男女不限，22-46岁，粤语流利\n【具体要求】制作点心，有2年以上经验\n【食宿安排】包工作餐，住宿扣10%底薪\n——————————————\n第三方费用2.18w（包含劳务费、办证费、保险）\nBV1086241 香港某餐饮集团 点心制作员 0';
+const oneSubmitted=P.analyze(repeatedFooter,'ZY-26-1106-91',{explicitBoundary:true});assert(oneSubmitted.order);assert.equal(oneSubmitted.parts.length,1);assert.equal(oneSubmitted.order.boundaryMode,'explicit');assert.equal(oneSubmitted.order.title,'点心制作员');assert.equal(P.splitBatchOrders(repeatedFooter+'\n---\n职位：接待专员\n月薪HK18000').length,2);

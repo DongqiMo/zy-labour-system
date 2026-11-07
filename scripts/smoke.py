@@ -178,16 +178,17 @@ with tempfile.TemporaryDirectory() as tmp:
             assert fixed['raw']=='【岗位】西餐帮厨\n【性别要求】男\n【工资薪酬】16310/月'
             remote=staff.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='legacy-kitchen'))")
             assert remote['code']==fixed['code'] and remote['gender']=='男' and remote['salary']=='16310/月'
-            # Whole-document multi-order guard, automatic segmentation and full supplier suffix.
+            # Entry-mode boundaries, explicit batch segmentation and full supplier suffix.
             admin.set_viewport_size({'width':1440,'height':1000})
             multiple='侍应生 男女不限 35岁以下 粤语\n工资待遇：17500HKD 有工作餐 住宿扣2500\n工作时间：每周6天*10小时班\n总价30500元含劳务办证，保险另计\n\n粤菜厨师 男 45岁以下 粤语\n工资待遇：21000HKD 有工作餐 住宿扣2500\n工作时间：每周6天*10小时班\n要求：会海鲜类的中餐，有管理经验优先'
             admin.evaluate("editing=null;mode='single';go('new');converter=x=>x")
             admin.locator('#raw').fill(multiple);count=admin.evaluate('orders.length')
-            admin.evaluate('autoParse()');assert '多份原单' in admin.locator('#recognition-feedback').inner_text()
-            assert admin.locator('#o-title').input_value()==''
-            admin.locator('#o-title').fill('人工输入');admin.locator('#o-code').fill('ZY-26-1103-80');admin.locator('#o-gender').select_option('男')
-            admin.evaluate('saveOrder()');assert admin.evaluate('orders.length')==count
-            admin.evaluate('moveSourceToBatch()');assert admin.evaluate('batch.length')==2
+            admin.evaluate('autoParse()');assert '检测到多份原单' not in admin.locator('#recognition-feedback').inner_text()
+            assert admin.evaluate('singleRecognitionMeta.boundaryMode')=='explicit'
+            assert admin.evaluate('orders.length')==count
+            admin.evaluate("mode='batch';batch=[];newView()")
+            admin.locator('#batchraw').fill(multiple.replace('\n\n','\n---\n'))
+            admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['侍应生','粤菜厨师']
             assert admin.evaluate('batch.map(o=>o.salary)')==['HKD17500','HKD21000']
             # Existing company orders are re-recognised only after preview and explicit Save.
@@ -308,6 +309,13 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('button[onclick="autoParse()"]').is_enabled()
             assert admin.locator('.recognition-percent').inner_text()!='100%'
             admin.evaluate('ZYAI.enhance=window.originalEnhance;delete window.finishAI')
+            # A single submitted source stays one document despite a repeated footer/reference.
+            admin.evaluate("editing=null;mode='single';go('new')")
+            admin.locator('#raw').fill('某餐饮集团\n【职位编号】BV1086241\n【职位名称】点心制作员\n【薪酬待遇】HKD18300-21500+加班费\n【职位要求】男女不限，22-46岁\n【工作时间】每天9H\n第三方费用2.18w办证保险\nBV1086241 某餐饮集团 点心制作员 0')
+            admin.evaluate('autoParse()')
+            assert admin.locator('#o-title').input_value()=='点心制作员'
+            assert admin.evaluate('singleRecognitionMeta.boundaryMode')=='explicit'
+            assert '检测到多份原单' not in admin.locator('#recognition-feedback').inner_text()
             # Freeze first machine fields before manual changes; persist and share that exact private snapshot.
             archive_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-024')
             admin.evaluate("editing=null;mode='single';go('new')")

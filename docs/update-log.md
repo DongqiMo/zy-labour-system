@@ -1,3 +1,9 @@
+## Entry-mode document boundaries
+
+- Single-entry recognition now treats the complete submitted source as one document; repeated supplier identifiers, decorative rules and footer role summaries no longer trigger a multi-document rejection before AI assistance.
+- Existing-order re-recognition previews respect the selected record boundary. Batch entry continues to split only on explicit staff separators.
+- Retained literal evidence, within-document conflict checks, fee filtering, source archives and manual-save ownership. Added synthetic repeated-footer and explicit-batch counterexamples plus browser coverage.
+
 ## Order-list visual hierarchy and button feedback
 
 - Added a pale blue-grey workspace background, alternating quiet order-card surfaces, clearer borders, left-edge accents, spacing and restrained shadows.
