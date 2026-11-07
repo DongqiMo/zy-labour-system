@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.locator('#loginForm button').click();page.wait_for_selector('#syncStatus')
                 assert page.locator('.card').count()==0,'Shared mode must not create seed orders'
                 for selector in ['html','body','main','#content']:
-                    assert page.locator(selector).evaluate('(e)=>getComputedStyle(e).backgroundColor')=='rgb(255, 255, 255)'
+                    assert page.locator(selector).evaluate('(e)=>getComputedStyle(e).backgroundColor')=='rgb(238, 243, 248)'
             staff.evaluate("go('new')")
             staff.locator('#raw').fill('【职位】共享厨师\n【月薪】HKD 18,799\n【工作时间】每天9小时\nDJ: 90000\n80000')
             staff.evaluate("const x=parse(document.querySelector('#raw').value);for(const k of Object.keys(orderFields))document.querySelector('#o-'+k).value=x[k]||''")
@@ -413,6 +413,6 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors
             browser.close()
-            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, white mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill, full batch field parity, UI-only English/Chinese without form loss, whole-document splitting, full supplier prefix and review-before-save; no browser errors')
+            print('PASS: independent accounts share orders/workers, reload persistence, edit conflict protection, raw preservation, permissions, logout, light blue-grey mobile layout, source-ID removal, labelled single/batch job parsing, persisted legacy code/gender/salary repair, three-value gender selects and required confirmation, upstream quote confidentiality and exact salary autofill, full batch field parity, UI-only English/Chinese without form loss, whole-document splitting, full supplier prefix and review-before-save; no browser errors')
     finally:
         server.shutdown();server.server_close()

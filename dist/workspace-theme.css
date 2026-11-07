@@ -1,0 +1,53 @@
+/* Quiet order workspace surfaces; no business-state changes. */
+:root{--workspace-bg:#eef3f8;--order-ink:#20364d;--order-muted:#56697b}
+:root,body,main,#content{background:var(--workspace-bg)}
+.sticky{background:var(--workspace-bg)}
+.order-card{background:#f9fbfd;border:1px solid #cbd8e4;border-left:4px solid #597b9c;border-radius:12px;padding:24px;margin-bottom:24px;box-shadow:0 3px 10px #172b460a;color:var(--order-ink);overflow-wrap:anywhere}
+.order-card:nth-of-type(even){background:#eaf1f8;border-left-color:#879caf}
+.order-card .order-top>div:first-child{min-width:0;flex:1}
+.order-card .order-top{gap:24px}
+.order-card .order-top h2{font-size:22px;line-height:1.45;margin:12px 0 8px;color:#172f4a}
+.order-card .order-top p,.order-card .meta,.order-card .muted{color:var(--order-muted)}
+.order-card .order-top>div:first-child>.badge{font-size:12px;font-weight:650;letter-spacing:.3px;background:#dbe8f5;color:#214d78;border:1px solid #bed0e2}
+.order-card .meta{gap:10px 24px;line-height:1.8;padding-top:12px;border-top:1px solid #cfdce7}
+.order-card .meta b{color:#244f79;font-weight:650}
+.order-card .price{display:block;min-width:145px}
+.order-card .price strong{font-size:28px}
+.order-card .details{border-top-color:#cbd8e4;gap:16px;margin-top:22px;padding-top:18px}
+.order-card .details>details{min-width:0;border:1px solid #cad7e3;padding:14px;border-radius:8px;background:#e5edf5}
+.order-card .details>details:nth-child(2){background:#f3f7fb}
+.order-card .details>details>summary{color:#304f6b;font-size:13px;font-weight:600;line-height:1.6}
+.order-card .details>details[open]>summary{padding-bottom:12px;border-bottom:1px solid #c8d6e3}
+.order-card pre{color:#253a4d;font-size:14px;line-height:1.95;margin:14px 0;overflow-wrap:anywhere}
+.order-date-group{background:#e4ecf4;border:1px solid #c6d4e2;border-radius:12px;padding:0;margin:18px 0 24px;box-shadow:0 2px 6px #172b4605;overflow:hidden}
+.order-date-group>summary{background:#e0e9f2;padding:18px 20px;font-size:17px;color:#284762;line-height:1.6}
+.order-date-group>summary .muted{color:#52687d}
+.order-date-group[open]>summary{background:#cfdfef;color:#173f67;border-bottom:1px solid #b9cde0;box-shadow:inset 4px 0 #326aa5}
+.order-date-content{padding:20px 18px 0}
+.order-date-content>.order-card:last-child{margin-bottom:20px}
+button{transition:background-color 180ms ease,border-color 180ms ease,box-shadow 180ms ease,transform 180ms ease}
+@media(hover:hover) and (pointer:fine){
+ button:not(:disabled):not([aria-busy="true"]):hover{background:#e4edf7;border-color:#a9bfd5;transform:translateY(-1px);box-shadow:0 3px 7px #172b4614}
+ button.primary:not(:disabled):not([aria-busy="true"]):hover{background:#254f7d;border-color:#254f7d}
+ nav button:not(:disabled):hover{background:#314965;color:#fff}
+ button.danger:not(:disabled):hover{background:#f9eded;border-color:#dcbcbc}
+}
+button:not(:disabled):not([aria-busy="true"]):active{transform:translateY(0);box-shadow:none}
+button:focus-visible{outline:3px solid #326aa5;outline-offset:3px}
+button:disabled,button[aria-busy="true"]{transform:none;box-shadow:none;pointer-events:none}
+@media(max-width:640px){
+ .order-card{padding:18px 15px;margin-bottom:20px;border-radius:10px}
+ .order-card .order-top{flex-direction:column;gap:16px}
+ .order-card .order-top h2{font-size:20px}
+ .order-card .price{min-width:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;text-align:left;border-top:1px solid #cfdce7;padding-top:12px}
+ .order-card .price strong{font-size:23px;margin:0}
+ .order-card .price button{margin-top:0}
+ .order-card .meta{gap:8px 16px}
+ .order-card .details{gap:12px}
+ .order-date-group>summary{padding:16px 14px;font-size:16px}
+ .order-date-group>summary .muted{font-size:12px}
+ .order-date-content{padding:14px 10px 0}
+ .order-date-content>.order-card:last-child{margin-bottom:14px}
+}
+@media(prefers-reduced-motion:reduce){button{transition:none}button:not(:disabled):not([aria-busy="true"]):hover{transform:none}}
+@media print{html,body,main,#content{background:#fff}button{transition:none;transform:none;box-shadow:none}}

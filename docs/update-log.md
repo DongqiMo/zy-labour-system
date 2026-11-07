@@ -1,3 +1,10 @@
+## Order-list visual hierarchy and button feedback
+
+- Added a pale blue-grey workspace background, alternating quiet order-card surfaces, clearer borders, left-edge accents, spacing and restrained shadows.
+- Strengthened code/title hierarchy and kept secondary metadata readable. Source and company disclosures now use distinct surfaces; date groups have a separate header and explicit expanded styling.
+- Added 180ms hover/press feedback for mouse users, visible keyboard focus, disabled/loading exclusions and reduced-motion support. Mobile cards stack price information without relying on hover.
+- Changed presentation styles and scoped card classes only; ordering, filters, collapse ownership, recognition and persistence remain unchanged.
+
 ## Smooth recognition waiting animation
 
 - Replaced stage jumps with a slow, CSS-interpolated waiting animation capped below completion. The displayed percentage is explicitly simulated; only an applied result reaches 100 percent.
