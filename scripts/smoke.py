@@ -25,6 +25,8 @@ with tempfile.TemporaryDirectory() as tmp:
             admin,staff=[c.new_page() for c in contexts];errors=[]
             for page,username in [(admin,'owner'),(staff,'colleague')]:
                 page.on('pageerror',lambda e:errors.append(str(e)))
+                # Existing acceptance flows deliberately discard drafts when navigating.
+                page.on('dialog',lambda dialog:dialog.accept())
                 page.goto(url);page.wait_for_selector('#loginForm')
                 page.locator('[name=username]').fill(username);page.locator('[name=password]').fill(password)
                 page.locator('#login-language [data-language-toggle]').click()
@@ -272,6 +274,10 @@ with tempfile.TemporaryDirectory() as tmp:
             unmarked=admin.evaluate("""async(record)=>{const copy={...record,id:'unmarked-reviewed-order',code:'ZY-26-1103-98',reviewConfirmation:''};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",legacy)
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true).length>0',unmarked)
             admin.evaluate("markOrderReviewed('unmarked-reviewed-order')")
+            assert admin.locator('#confirm-order-review').is_visible()
+            assert not admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.id==='unmarked-reviewed-order').humanReviewedSource)")
+            admin.locator('#confirm-order-review').click()
+            admin.wait_for_function("() => !document.querySelector('#modal').open")
             marked=admin.evaluate("api('/api/orders').then(result=>result.orders.find(o=>o.id==='unmarked-reviewed-order'))")
             assert marked['humanReviewedSource']
             assert all(marked[key]==unmarked[key] for key in ['raw','title','salary','gender','price'])

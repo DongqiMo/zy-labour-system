@@ -4,7 +4,7 @@ const batchManualPrices=new WeakSet();
 const singleOrderView=window.newView;
 window.newView=function(){
  if(mode!=='batch'||editing)return singleOrderView();
- $('#content').innerHTML=`<div class="heading"><div><div class="eyebrow">ORDER WORKSPACE</div><h1>整理新劳务单</h1><p>移除上游编号，核对原单，再生成清晰的公司发布稿。</p></div><button onclick="editing=null;go('orders')">返回列表</button></div><div class="steps"><span>① 录入原单</span><span>② 确认信息</span><span>③ 确认备注金额并生成</span></div><div class="tabs"><button onclick="mode='single';newView()">单条录入</button><button class="primary" onclick="mode='batch';newView()">批量录入</button></div><div class="two batch-workspace"><section class="panel" id="batch-source"></section><section class="panel" id="batch-review"></section></div>`;
+ $('#content').innerHTML=`<div class="heading"><div><div class="eyebrow">ORDER WORKSPACE</div><h1>整理新劳务单</h1><p>移除上游编号，核对原单，再生成清晰的公司发布稿。</p></div><button onclick="editing=null;go('orders')">返回列表</button></div><div class="steps"><span>① 录入原单</span><span>② 确认信息</span><span>③ 确认备注金额并生成</span></div><div class="tabs"><button onclick="switchOrderMode('single')">单条录入</button><button class="primary" onclick="switchOrderMode('batch')">批量录入</button></div><div class="two batch-workspace"><section class="panel" id="batch-source"></section><section class="panel" id="batch-review"></section></div>`;
  renderBatch();
 };
 function batchPasteMarkup(){return `<h2>01 / 批量粘贴原单</h2><p>多份原单之间使用独立的 ---、“下一单”或“第 N 单”分隔。</p><textarea id="batchraw" class="rawbox" placeholder="在此粘贴多份微信群原单…" oninput="batchInput=this.value">${esc(batchInput)}</textarea><div class="actions"><button class="primary" onclick="previewBatch()">识别并预览</button></div>`}

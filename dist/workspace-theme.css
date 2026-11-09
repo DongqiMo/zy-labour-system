@@ -51,3 +51,5 @@ button:disabled,button[aria-busy="true"]{transform:none;box-shadow:none;pointer-
 }
 @media(prefers-reduced-motion:reduce){button{transition:none}button:not(:disabled):not([aria-busy="true"]):hover{transform:none}}
 @media print{html,body,main,#content{background:#fff}button{transition:none;transform:none;box-shadow:none}}
+
+.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.review-status{background:#f4e8cc;color:#755311}.reviewed-stamp{font-size:12px;color:#456079}.publication-problems{color:#735010;line-height:1.8;background:#fff5de;padding:14px 14px 14px 32px;border-radius:8px}.review-dialog-section{margin:16px 0}.review-dialog-section h3{font-size:15px}.review-dialog-section p{overflow-wrap:anywhere}.review-dialog-section ul{line-height:1.8}@media(max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}

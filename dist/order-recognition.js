@@ -11,10 +11,11 @@ window.newView=function(){
  for(const control of $('#content').querySelectorAll('[id^="o-"]'))control.addEventListener(control.tagName==='SELECT'?'change':'input',refresh);
  if(editing){feedback.innerHTML=recognitionReviewMarkup(singleRecognitionMeta);const button=document.createElement('button');button.type='button';button.textContent='按原单重新识别（预览）';button.onclick=reparseExistingOrder;raw.parentElement.querySelector('.note').before(button)}
 };
+const recognitionExclusionReasons={supplier_package_quote:'上家全包报价',upstream_fee:'上家收费信息',supplier_footer:'上家尾部报价',unlabelled_amount:'无标签金额或算式',promotional_heading:'宣传提示'};
 function recognitionReviewMarkup(order,batchIndex=-1){
  if(!order)return '';
  const report=ZYOrderParser.reviewOrder(order.raw||'',order);
- const reasons={supplier_package_quote:'上家全包报价',upstream_fee:'上家收费信息',supplier_footer:'上家尾部报价',unlabelled_amount:'无标签金额或算式',promotional_heading:'宣传提示'};
+ const reasons=recognitionExclusionReasons;
  const excluded=report.excluded.map(entry=>`<tr><td data-user-content>${esc(entry.text)}</td><td>${reasons[entry.reason]||'已排除'}</td></tr>`).join('');
  const conflicts=report.conflicts.map(entry=>`<p data-user-content>${esc(entry.text)}</p>`).join('');
  const confirmed=ZYOrderParser.isHumanReviewed(order)||ZYOrderParser.hasReviewConfirmation(order);
@@ -111,15 +112,27 @@ window.saveOrder=async function(){
  singleRecognitionMeta=null;leaveOrderEditor();toast('劳务单已保存');
 };
 window.copyOrder=async function(id){
- const order=ZYOrderParser.present(orders.find(o=>o.id===id)),problems=ZYOrderParser.validateCompany(order,true);
- if(problems.length)return toast(problems[0]);
- try{await navigator.clipboard.writeText(publish(order));toast('公司单已复制')}catch{toast('复制失败，请展开公司单选择文字复制')}
+ const record=orders.find(o=>o.id===id);if(!record)return;
+ if(orderState(record)!=='ready')return toast(priceN(record.price)<=0?'请先确认金额':orderPublication(record).problems[0]);
+ try{await navigator.clipboard.writeText(publish(record));toast('公司单已复制')}catch{toast('复制失败，请展开公司单选择文字复制')}
 };
-
-window.markOrderReviewed=async function(id){
- const record=orders.find(order=>order.id===id);if(!record)return;
- const metadata=ZYOrderParser.humanReviewMetadata(record,sessionUser?.username);
+let pendingOrderReview=null;
+function reviewList(title,items,userContent=false){return items.length?`<section class="review-dialog-section"><h3>${title}</h3><ul>${items.map(text=>`<li ${userContent?'data-user-content':''}>${esc(text)}</li>`).join('')}</ul></section>`:''}
+window.markOrderReviewed=function(id){
+ const record=orders.find(order=>order.id===id);if(!record||!sessionUser)return;
+ const report=ZYOrderParser.reviewOrder(record.raw||'',record),metadata=ZYOrderParser.humanReviewMetadata(record,sessionUser.username);
+ const blockers=ZYOrderParser.validateCompany({...ZYOrderParser.present(record),...metadata},true);
+ pendingOrderReview={id,record:JSON.stringify(record),owner:sessionUser.id};
+ $('#modal').innerHTML=`<h2>确认人工核对</h2><p data-user-content>${esc(record.code)} · ${esc(record.title)}</p>${reviewList('待核对提示',report.warnings)}${!report.warnings.length&&!report.unclassified.length&&!report.conflicts.length?'<p>未发现额外核对项目，仍请确认识别结果。</p>':''}${reviewList('未分类内容',report.unclassified,true)}${reviewList('冲突内容',report.conflicts.map(item=>item.text),true)}${report.excluded.length?`<section class="review-dialog-section"><h3>已排除内容与原因</h3><table class="source-table"><tbody>${report.excluded.map(item=>`<tr><td data-user-content>${esc(item.text)}</td><td>${recognitionExclusionReasons[item.reason]||'已排除'}</td></tr>`).join('')}</tbody></table></section>`:''}${reviewList('请先修改以下问题',blockers)}<div class="actions"><button onclick="$('#modal').close()">取消</button>${blockers.length?'<button class="primary" onclick="editPendingReview()">编辑公司单</button>':'<button class="primary" id="confirm-order-review" onclick="confirmOrderReview()">确认已人工核对</button>'}</div>`;
+ $('#modal').showModal();
+};
+function editPendingReview(){const id=pendingOrderReview?.id;$('#modal').close();if(id)editOrder(id)}
+window.confirmOrderReview=async function(){
+ const pending=pendingOrderReview,record=orders.find(order=>order.id===pending?.id);if(!record||!sessionUser||sessionUser.id!==pending.owner)return;
+ if(JSON.stringify(record)!==pending.record)return toast('订单已变化，请重新打开核对');
+ const metadata=ZYOrderParser.humanReviewMetadata(record,sessionUser.username);
  const problems=ZYOrderParser.validateCompany({...ZYOrderParser.present(record),...metadata},true);if(problems.length)return toast(problems[0]);
- const before=orders;orders=orders.map(order=>order.id===id?{...order,...metadata}:order);
- if(!await persist()){orders=before;return;}render();toast('公司单已人工核对');
+ const before=orders;orders=orders.map(order=>order.id===record.id?{...order,...metadata}:order);
+ if(!await persist()){orders=before;return;}
+ pendingOrderReview=null;$('#modal').close();render();toast('公司单已人工核对');
 };

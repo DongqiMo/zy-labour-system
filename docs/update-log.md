@@ -1,3 +1,12 @@
+## UI/UX batch one: consistent publication states and unsaved-content protection
+
+- Unified badges, four today counters, status filtering and copy authorization around amount plus the existing publication validator. Kept persisted status and historical/manual review precedence; cached presented/validated records by content and exposed exact blockers in company details.
+- Added ephemeral single/edit baselines and native leave confirmations, destructive worker replacement checks, explicit logout protection and browser refresh/close warnings. Preserved batch/worker buffers across ordinary navigation without prompting; automatic successful-save navigation bypasses the guard. No browser draft storage was added.
+- Replaced immediate human-review writes with a review dialog, shared exclusion reasons, hypothetical-metadata blocker checks and a separately serialized confirmation write. Added reviewer/time display with legacy label-only fallback.
+- Removed only the repeated position-label line from publication. Fee calculation, amount UI, fixed fee wording, recognition behavior, permissions and live records remain unchanged.
+- Added synthetic local-browser coverage for all three display states, filters/counts/copy, cache invalidation, legacy review tokens, review cancellation/blockers/business-field preservation, no-extra-items and English notices, hidden-field dirtiness, single/edit cancellation, batch/worker buffer retention, native refresh protection, logout cancellation and successful save navigation. Existing parser and full browser smoke coverage remains required.
+- Batch two/three changes are deferred. No Supabase deployment or migration is needed; no live-data tests are performed.
+
 ## Show only the automatically generated fee note in entry forms
 
 - Removed the visible numeric fee-amount row from shared single/batch/edit form rendering. Only the read-only generated fee note is shown.

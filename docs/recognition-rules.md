@@ -74,6 +74,14 @@ Manual field changes refresh warnings without replacing the form, allowing corre
 
 Metadata uses scalar JSON-compatible strings (`parserVersion`, `parsedSnapshot`, `manualFields`, `recognitionAudit`, `reviewConfirmation`, and supplier prefix). Internal audit text may include excluded supplier prices because it documents the private source; publication must only use the explicit company-field allowlist.
 
+## Publication state and draft protection
+
+All order badges, today's four counters, status filters and copy actions share one derived state: `draft` for an unconfirmed internal amount, `review` for a positive amount with publication-validation errors, and `ready` only when both conditions pass. Stored `status` values remain unchanged for compatibility. Presented fields and validation results are cached against the complete serialized record; content changes invalidate the cache. A review-state company disclosure lists its actual validation errors and has no copy action. Publication keeps the company-code/position heading without repeating a separate position-label line.
+
+Marking an order as reviewed first opens an explicit confirmation dialog containing the existing warnings, unclassified/conflicting text and exclusions with the shared reason labels. Hypothetical human metadata is validated before offering confirmation, and checked again before a serialized revision-protected write. Blocking field or confidentiality errors require editing instead. Review changes only acknowledgement metadata, never the business fields. Cards display the reviewer and review time when recorded; legacy acknowledgements without those values retain the reviewed label alone.
+
+Single-entry/edit forms keep an in-memory baseline after rendering, including raw input and every company field (also the hidden amount). Leaving, switching modes or replacing that form confirms unsaved changes before changing navigation state. Successful save navigation does not warn. Batch and worker buffers already survive ordinary in-app navigation and therefore do not warn on it. Destructive new-worker/edit-worker actions compare worker content with the saved record, ignoring bookkeeping and empty history rows, and ask before replacement. Explicit logout and browser refresh/close check all three buffers. Browser-native close warnings depend on browser interaction requirements; expired-session forced logout cannot be intercepted. No draft content is written to localStorage or IndexedDB, and this is not automatic recovery after a browser crash.
+
 ## Error memory and release procedure
 
 The error catalog is `tests/fixtures/recognition-errors.json`. Its stable case IDs, root causes, synthetic sources, expected fields, forbidden output, and review/exclusion/conflict expectations are executable in `tests/recognition-mechanism.mjs`.
