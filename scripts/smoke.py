@@ -4,6 +4,7 @@ import sys
 import tempfile
 import threading
 import secrets
+import sqlite3
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from server.app import make_server,create_user
 from playwright.sync_api import sync_playwright
@@ -113,7 +114,11 @@ with tempfile.TemporaryDirectory() as tmp:
             company=admin.evaluate('publish(orders[0])')
             assert '工资待遇：HKD17118' in company
             assert '底15500+1618津贴' in company
-            assert '卓亚全包价：3.7w' in company
+            assert '备注：劳务，服务费管理费：3.7w全包' in company
+            assert company.endswith('以上内容仅供参考，具体信息以面试为准')
+            assert '卓亚全包价' not in company
+            assert admin.evaluate("priceFmt('4w')")=='4.0w'
+            assert admin.evaluate("priceFmt('38000')")=='3.8w'
             assert not any(token in company for token in ['23800'])
             assert admin.evaluate("orders[0].raw.includes('23800全包')")
             assert 'XR80080' not in admin.evaluate('orders[0].raw')
@@ -123,7 +128,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('previewBatch()');assert admin.evaluate('batch.length')==2
             assert admin.evaluate('batch.map(o=>o.title)')==['厨师','司机']
             import json
-            frozen_batch=admin.evaluate('batch.map(o=>o.firstRecognition)')
+            assert admin.evaluate('batch.every(o=>!("firstRecognition" in o))')
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
             assert admin.locator('#batch-fields input,#batch-fields textarea,#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
@@ -160,9 +165,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('orders[0].requirements')=='批量备注：工作要求'
             assert admin.evaluate('orders[0].interview')=='现场面试'
             assert admin.evaluate('orders[1].price')=='4.6w'
-            assert admin.evaluate('orders.slice(0,2).map(o=>o.firstRecognition)')==frozen_batch
-            assert json.loads(frozen_batch[0])['company']['gender']==''
-            assert json.loads(frozen_batch[0])['company']['salary']=='HKD18000'
+            assert admin.evaluate('orders.slice(0,2).every(o=>!("firstRecognition" in o))')
             assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
             admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
@@ -316,28 +319,26 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('#o-title').input_value()=='点心制作员'
             assert admin.evaluate('singleRecognitionMeta.boundaryMode')=='explicit'
             assert '检测到多份原单' not in admin.locator('#recognition-feedback').inner_text()
-            # Freeze first machine fields before manual changes; persist and share that exact private snapshot.
+            # Do not capture or persist first-machine snapshots; normal manual business saves remain intact.
             archive_source=next(case['source'] for case in mechanism_cases if case['id']=='REC-024')
             admin.evaluate("editing=null;mode='single';go('new')")
             admin.locator('#raw').fill(archive_source);admin.evaluate('autoParse()')
             assert admin.locator('.recognition-percent').inner_text()=='100%'
             assert admin.locator('button[onclick="autoParse()"]').is_enabled()
-            frozen=admin.evaluate('singleRecognitionMeta.firstRecognition')
-            assert json.loads(frozen)['source']==archive_source
-            assert json.loads(frozen)['company']['title']=='溶金师傅'
+            assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位')
             admin.locator('#o-salary').fill('HKD29999')
             admin.locator('#o-price').fill('4w');admin.evaluate('saveOrder()')
             admin.wait_for_selector('.card',state='attached')
             archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")
-            assert archive_record['firstRecognition']==frozen
+            assert 'firstRecognition' not in archive_record
             assert admin.evaluate("o=>publish(o)",archive_record).find('firstRecognition')==-1
             admin.evaluate("id=>editOrder(id)",archive_record['id']);admin.evaluate('reparseExistingOrder()')
-            assert admin.evaluate('singleRecognitionMeta.firstRecognition')==frozen
+            assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位二')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
-            assert admin.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id).firstRecognition)",archive_record['id'])==frozen
-            assert staff.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id).firstRecognition)",archive_record['id'])==frozen
+            assert admin.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id))",archive_record['id']).get('firstRecognition') is None
+            assert staff.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id))",archive_record['id']).get('firstRecognition') is None
             # Saving/cancelling an edit returns to its originating order list and preserves filters.
             nav_order=admin.evaluate("orders.find(o=>day(o.createdAt)===today()&&o.title&&o.salary&&o.gender)")
             assert nav_order
@@ -403,20 +404,22 @@ with tempfile.TemporaryDirectory() as tmp:
             assert '原单识别自查' in admin.locator('#modal').inner_text()
             assert admin.locator('#modal .recognition-review').count()==len(original['orders'])
             assert admin.evaluate("api('/api/orders')")==original
-            with admin.expect_download() as download:
-                admin.evaluate('downloadOrderAudit()')
-            audit=json.loads(Path(download.value.path()).read_text())
-            assert audit['format']=='zy-first-recognition-archive' and audit['total']==len(original['orders'])
-            assert audit['captured']>0 and audit['notRecorded']>0
-            archived=next(record for record in audit['records'] if record['id']==archive_record['id'])
-            assert archived['company']['title']=='溶金师傅' and archived['source']==archive_source
-            assert '人工核对职位二' not in json.dumps(audit,ensure_ascii=False)
-            assert all(record['company'] is None for record in audit['records'] if record['status']=='not_recorded')
-            assert all('shift' not in (record['company'] or {}) for record in audit['records'])
+            assert admin.evaluate('typeof downloadOrderAudit')=='undefined'
+            assert not admin.locator('button[onclick="downloadOrderAudit()"]').count()
             admin.evaluate('openAuditedOrder(0)')
             assert admin.locator('#o-shift').count()==0
             assert admin.evaluate("api('/api/orders')")==original,'Audit preview must not write changes'
             admin.evaluate("editing=null;go('orders')")
+            # Purge an old snapshot on workspace entry without changing any business field.
+            with sqlite3.connect(path) as seed_db:
+                old_state=seed_db.execute('SELECT orders FROM state WHERE id=1').fetchone()
+                seeded=json.loads(old_state[0]);business_before=[dict(record) for record in seeded]
+                seeded[0]['firstRecognition']='legacy redundant private snapshot'
+                seed_db.execute('UPDATE state SET orders=?,revision=revision+1 WHERE id=1',(json.dumps(seeded,ensure_ascii=False),))
+            admin.evaluate("api('/api/session').then(enterWorkspace)")
+            cleaned_state=admin.evaluate("api('/api/orders')")
+            assert cleaned_state['orders']==business_before
+            assert all('firstRecognition' not in record for record in cleaned_state['orders'])
             staff.evaluate('logout()');staff.wait_for_selector('#loginForm')
             assert staff.evaluate("fetch('/api/orders').then(r=>r.status)")==401
             assert not errors,errors

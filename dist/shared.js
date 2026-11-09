@@ -1,6 +1,8 @@
 // Application API; Supabase for free static hosting, same-origin SQLite for self-hosting.
 let lastSync=0,pendingSync=null;const cloudMode=window.ZY_CONFIG?.provider==='supabase';let cloud=null;
 async function api(path,{method='GET',body}={}){
+  if(path==='/api/orders'&&method==='PUT'&&Array.isArray(body?.orders))body={...body,orders:ZYRecognitionArchive.cleanOrders(body.orders)};
+  if(path==='/api/import'&&Array.isArray(body?.payload?.orders))body={...body,payload:{...body.payload,orders:ZYRecognitionArchive.cleanOrders(body.payload.orders)}};
   if(cloudMode){try{if(!cloud)throw new Error('云端尚未配置');return await cloud.call(path,{method,body})}catch(e){if(e.status===401&&path!=='/api/login')loginScreen('登录已过期，请重新登录');throw e}}
   const response=await fetch(path,{method,credentials:'same-origin',cache:'no-store',headers:{...(body?{'Content-Type':'application/json'}:{}),...(csrf?{'X-CSRF-Token':csrf}:{})},body:body?JSON.stringify(body):undefined});
   let data;try{data=await response.json()}catch{throw new Error('服务器响应异常，请稍后重试')}
@@ -18,7 +20,7 @@ function loginScreen(message=''){
 async function enterWorkspace(data){
   sessionUser=data.user;csrf=data.csrf;
   let result=await api('/api/orders');
-  const repaired=ZYOrderParser.repairLegacyOrders(result.orders);
+  const repaired=ZYRecognitionArchive.cleanOrders(ZYOrderParser.repairLegacyOrders(result.orders));
   if(JSON.stringify(repaired)!==JSON.stringify(result.orders)){
     try{const saved=await api('/api/orders',{method:'PUT',body:{orders:repaired,revision:result.revision}});result={orders:repaired,revision:saved.revision}}
     catch(e){result=await api('/api/orders');toast('旧公司单修正尚未完成：'+e.message)}
@@ -60,7 +62,7 @@ async function migrateLocal(){
  }catch(e){toast(`已导入 ${orderCount} 份订单、${workerCount} 份资料。${e.message}。可重试，已有ID不重复导入`)}
 }
 async function setMaintenance(readOnly){if(!confirm(readOnly?'暂停所有业务资料写入，以便备份迁移？':'恢复业务写入？'))return;try{const data=await api('/api/maintenance',{method:'POST',body:{readOnly}});$('#maintenanceStatus').textContent=data.readOnly?'当前：已暂停写入（只读）':'当前：正常读写';toast('维护状态已更新')}catch(e){toast(e.message)}}
-async function exportPortable(){try{const data=await api('/api/export');const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`zy-full-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('完整备份已生成，请保存到私人位置')}catch(e){toast(e.message)}}
+async function exportPortable(){try{const data=await api('/api/export');data.orders=ZYRecognitionArchive.cleanOrders(data.orders);const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`zy-full-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('完整备份已生成，请保存到私人位置')}catch(e){toast(e.message)}}
 function choosePortable(){$('#portableFile').click()}
 async function importPortable(file){
  if(!file)return;

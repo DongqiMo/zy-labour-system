@@ -102,16 +102,11 @@ assert.equal(P.parse('岗位：招聘专员\n工资：HK21000').title,'招聘专
 for(const title of ['餐厅服务员','酒店前台','美容中心接待专岗']){const o=P.parse(title+'\n工资：HK21000');assert.equal(o.title,title);assert.equal(o.employer,'');}
 for(const employer of ['海岸诊所','海岸医院','海岸商行','海岸会所']){const o=P.parse(employer+'\n工序协调专岗HK21000');assert.equal(o.employer,employer);assert.equal(o.title,'工序协调专岗');}
 
-// First machine snapshots are independent of current human fields and are not reconstructed for legacy orders.
-const archiveSource='ORIGIN-20997777【岗位】资料录入专岗\n【工资】HK18880\n【性别】女';
-const firstOrder=P.parse(archiveSource,'ZY-26-1103-90');firstOrder.price='4w';const firstRecognition=ZYRecognitionArchive.capture(archiveSource,firstOrder);
-const first=JSON.parse(firstRecognition);assert.equal(first.source,archiveSource);assert.equal(first.company.title,'资料录入专岗');assert.equal(first.company.salary,'HKD18880');
-const editedArchive={...firstOrder,firstRecognition,title:'人工修改的职位',salary:'HKD29999',notes:'仅限业务的人工内容',price:'9w'};
-const archiveReport=ZYRecognitionArchive.report([editedArchive,{id:'old',raw:'旧原单',title:'人工旧职位',salary:'HKD39999'}]);
-assert.equal(archiveReport.captured,1);assert.equal(archiveReport.notRecorded,1);assert.equal(archiveReport.records[0].company.title,first.company.title);assert.equal(archiveReport.records[1].company,null);
-assert(!JSON.stringify(archiveReport).includes('人工修改的职位'));assert(!JSON.stringify(archiveReport).includes('29999'));assert(!JSON.stringify(archiveReport).includes('仅限业务的人工内容'));assert(!JSON.stringify(archiveReport).includes('人工旧职位'));assert.equal(editedArchive.firstRecognition,firstRecognition);
+// Retirement deletes only redundant first-machine snapshots, retaining all business values.
+const retained={id:'retained',raw:'原单原文',title:'人工职位',salary:'HKD29999',notes:'人工备注',price:'3.8w',humanReviewedSource:'confirmed',firstRecognition:'private old snapshot'};
+const cleaned=ZYRecognitionArchive.cleanOrders([retained])[0];assert(!('firstRecognition' in cleaned));const expected={...retained};delete expected.firstRecognition;assert.deepEqual(cleaned,expected);assert.equal(retained.firstRecognition,'private old snapshot');assert.equal(ZYRecognitionArchive.capture,undefined);
 for(const fixture of catalog.cases.filter(f=>['REC-023','REC-024','REC-025','REC-026','REC-030'].includes(f.id))){const r=P.analyze(fixture.source,'ZY-26-1103-90',fixture.options||{});assert(!r.warnings.some(w=>w.includes('性别不明确')));assert(r.sources.gender?.length);if(r.order.age)assert(r.sources.age?.length);}
-console.log('PASS: report-derived regressions, source-tracked demographics and first-machine-only export with legacy gaps');
+console.log('PASS: report-derived regressions, source-tracked demographics and snapshot retirement preserving business records');
 
 // Entry mode owns document boundaries: repeated reference/footer is one submitted document.
 const repeatedFooter='香港某餐饮集团\n【职位编号】BV1086241\n【职位名称】点心制作员\n【薪酬待遇】HKD18300-21500+加班费\n【工作时间】每周6天，每天9H\n【职位要求】男女不限，22-46岁，粤语流利\n【具体要求】制作点心，有2年以上经验\n【食宿安排】包工作餐，住宿扣10%底薪\n——————————————\n第三方费用2.18w（包含劳务费、办证费、保险）\nBV1086241 香港某餐饮集团 点心制作员 0';

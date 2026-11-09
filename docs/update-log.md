@@ -1,3 +1,11 @@
+## Retire extra recognition snapshots and publish the company fee as a note
+
+- Stopped capturing original-input/first-machine copies in single/batch/re-recognition and removed the snapshot download. Retained ordinary source records, human edits, current evidence and review ownership.
+- Added idempotent revision-checked workspace cleanup of legacy `firstRecognition` fields and stripping on writes/imports/new exports. Prepared and locally tested a hosted SQL cleanup/trigger that prevents old clients restoring snapshots; hosted execution remains an owner step. Existing downloaded/provider backups are not claimed erased.
+- Replaced ZY all-inclusive-price UI labels with fee-note labels. Preserved the automatic suggestion formula and manual overrides; display and new saved input use `x.xw`.
+- Company copy now ends with `备注：劳务，服务费管理费：x.xw全包` and `以上内容仅供参考，具体信息以面试为准`.
+- Verified source preservation, no new snapshots, historical snapshot-only cleanup, manual edits, fee publication, permissions and existing database roundtrips.
+
 ## Entry-mode document boundaries
 
 - Single-entry recognition now treats the complete submitted source as one document; repeated supplier identifiers, decorative rules and footer role summaries no longer trigger a multi-document rejection before AI assistance.

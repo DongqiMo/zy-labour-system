@@ -63,4 +63,12 @@ await db.exec('reset role');await db.exec('delete from zy_private.ai_member_usag
 await login(owner);await rpc('zy_maintenance_set',true);await rejects(()=>rpc('zy_ai_reserve'),/暂停|只读/);await rpc('zy_maintenance_set',false);
 await rpc('zy_member_disable',staff);await login(staff);await rejects(()=>rpc('zy_orders_get'),/账号未获/);await rejects(()=>rpc('zy_ai_reserve'),/账号未获/);
 await login(owner);await rejects(()=>rpc('zy_member_disable',owner),/自己的账号/);
+await db.exec('reset role');
+const beforeRetirement=(await db.query('select orders,revision from zy_private.order_state where id=1')).rows[0];
+await db.exec(readFileSync(new URL('../supabase/migrations/202611080001_retire_first_recognition.sql',import.meta.url),'utf8'));
+const afterRetirement=(await db.query('select orders,revision from zy_private.order_state where id=1')).rows[0];
+assert.deepEqual(afterRetirement.orders,beforeRetirement.orders.map(({firstRecognition,...business})=>business));
+await login(owner);const fresh=await rpc('zy_orders_get');
+await rpc('zy_orders_save',fresh.orders.map(o=>({...o,firstRecognition:'old-client-reintroduced'})),fresh.revision);
+assert((await rpc('zy_orders_get')).orders.every(o=>!Object.hasOwn(o,'firstRecognition')));
 await db.close();console.log('PASS: PostgreSQL SQL, anonymous/outsider/staff/admin permissions, sharing, edit conflicts, immutable raw, snapshot export, atomic empty-target restore, PostgreSQL→SQLite→PostgreSQL images/PDF/history roundtrip, read-only migration mode, disabled membership');
