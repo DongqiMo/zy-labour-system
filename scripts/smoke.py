@@ -9,6 +9,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from server.app import make_server,create_user
 from playwright.sync_api import sync_playwright
 
+def set_amount(page, selector, value):
+    page.eval_on_selector(selector, "(e,v)=>{e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}))}", value)
+
 with tempfile.TemporaryDirectory() as tmp:
     path=Path(tmp)/'test.sqlite3';server=make_server(path,port=0,secure=False)
     url='http://127.0.0.1:'+str(server.server_address[1]);server.public_origin=url
@@ -41,7 +44,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert staff.evaluate("suggestion('HKD 18,799')")=='3.8w'
             assert staff.locator('#o-gender').evaluate('(e)=>e.tagName')=='SELECT'
             assert staff.locator('#o-gender option').all_text_contents()==['请选择招聘性别','男','女','男女不限']
-            staff.locator('#o-price').fill('3.8w');staff.evaluate('saveOrder()')
+            set_amount(staff,'#o-price','3.8w');staff.evaluate('saveOrder()')
             assert '请选择招聘性别' in staff.locator('.toast').inner_text()
             assert staff.evaluate('orders.length')==0
             staff.locator('#o-gender').select_option('男女不限');staff.evaluate('saveOrder()');staff.wait_for_selector('.card',state='attached')
@@ -109,7 +112,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('.recognition-review').count()==1
             admin.locator('.recognition-review > summary').click()
             assert 'HKD17118' in admin.locator('.source-table').first.inner_text()
-            admin.locator('#o-price').fill('3.7w')
+            set_amount(admin,'#o-price','3.7w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             company=admin.evaluate('publish(orders[0])')
             assert '工资待遇：HKD17118' in company
@@ -139,10 +142,10 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('#b-0-language').fill('粤语、英语')
             admin.locator('#b-0-interview').fill('现场面试')
             admin.locator('#b-0-rest').fill('每月4天')
-            admin.locator('#b-0-price').fill('3.9w')
+            set_amount(admin,'#b-0-price','3.9w')
             admin.locator('#b-0-salary').fill('HKD 20,000')
             assert admin.locator('#b-0-price').input_value()=='3.9w'
-            admin.locator('#b-0-price').fill('')
+            set_amount(admin,'#b-0-price','')
             before=admin.evaluate('JSON.stringify(batch)')
             source=admin.locator('#batch-item-raw').input_value()
             admin.locator('header [data-language-toggle]').click()
@@ -155,7 +158,7 @@ with tempfile.TemporaryDirectory() as tmp:
             # Both columns use the same layout as single entry.
             assert admin.locator('#batch-source').bounding_box()['x']<admin.locator('#batch-review').bounding_box()['x']
             admin.evaluate('selectBatchItem(1)')
-            admin.locator('#b-1-gender').select_option('男');admin.locator('#b-1-price').fill('4.6w')
+            admin.locator('#b-1-gender').select_option('男');set_amount(admin,'#b-1-price','4.6w')
             admin.evaluate('selectBatchItem(0)')
             assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
             assert admin.locator('#b-0-language').input_value()=='粤语、英语'
@@ -241,13 +244,13 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             assert '住扣封顶20%' in admin.locator('.source-table').first.inner_text()
             assert admin.locator('.recognition-review details').count()==1
-            admin.locator('#o-price').fill('4.2w');admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            set_amount(admin,'#o-price','4.2w');admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             released=admin.evaluate("publish(orders[0])")
             assert 'HKD17770+' in released and '出报价单' in released
             assert not any(value in released for value in ['2K','2.82','劳务费900','recognitionAudit'])
             unknown=next(case['source'] for case in mechanism_cases if case['id']=='REC-005')
             admin.evaluate("editing=null;mode='single';go('new')")
-            admin.locator('#raw').fill(unknown);admin.evaluate('autoParse()');admin.locator('#o-price').fill('4w')
+            admin.locator('#raw').fill(unknown);admin.evaluate('autoParse()');set_amount(admin,'#o-price','4w')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
             pending=admin.evaluate('orders[0].id')
             assert admin.evaluate("ZYOrderParser.validateCompany(orders[0],true).includes('请先核对未分类或冲突内容并确认')")
@@ -329,9 +332,11 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位')
             admin.locator('#o-salary').fill('HKD29999')
-            admin.locator('#o-price').fill('4w')
+            set_amount(admin,'#o-price','4w')
             assert admin.locator('#o-fee-note').input_value()==admin.evaluate("feeNote('4w')")
             assert admin.locator('#o-fee-note').get_attribute('readonly') is not None
+            assert admin.locator('#o-price').is_hidden()
+            assert admin.locator('label').filter(has_text='备注金额（').count()==0
             admin.evaluate('saveOrder()')
             admin.wait_for_selector('.card',state='attached')
             archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")

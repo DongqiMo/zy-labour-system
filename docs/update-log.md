@@ -1,3 +1,9 @@
+## Show only the automatically generated fee note in entry forms
+
+- Removed the visible numeric fee-amount row from shared single/batch/edit form rendering. Only the read-only generated fee note is shown.
+- Retained the internal price value, existing suggestion formula, salary-change calculation, persisted manual amounts and company publication format. No business-record migration is introduced.
+- Verified hidden internal amounts, visible generated notes and normal single/batch save/edit behavior.
+
 ## Automatic fee-note preview and complete self-audit removal
 
 - Added a read-only generated note beside the numeric fee amount in single/batch forms. Salary suggestions and manual numeric changes refresh the full note; publication uses the same generator and existing fee calculation.
