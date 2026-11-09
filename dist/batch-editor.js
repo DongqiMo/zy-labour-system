@@ -38,7 +38,7 @@ window.renderBatch=function(){
   o[field]=event.target.value;o.reviewConfirmation='';
   if(field==='price')batchManualPrices.add(o);
   if(field==='salary'&&!batchManualPrices.has(o)){o.price=suggestion(o.salary);$('#'+prefix+'-price').value=o.price}
-  updateRecognitionReview($('#batch-audit'),o,activeBatch);
+  refreshFeeNote(prefix);updateRecognitionReview($('#batch-audit'),o,activeBatch);
  });
  $('#batch-fields').addEventListener('change',event=>{if(event.target.tagName!=='SELECT')return;const field=event.target.id.slice((prefix+'-').length);if(Object.hasOwn(orderFields,field)){o[field]=event.target.value;o.reviewConfirmation='';updateRecognitionReview($('#batch-audit'),o,activeBatch)}});
 };

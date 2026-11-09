@@ -1,3 +1,10 @@
+## Automatic fee-note preview and complete self-audit removal
+
+- Added a read-only generated note beside the numeric fee amount in single/batch forms. Salary suggestions and manual numeric changes refresh the full note; publication uses the same generator and existing fee calculation.
+- Accepted legacy fee values accidentally containing the fixed wording, extracting their explicit w/万 amount for normalisation rather than losing the fee.
+- Removed the global source self-audit button, count, module, background invocation and export entry points. Ordinary source review/manual confirmation remain.
+- Historical `firstRecognition` cleanup remains revision-protected on workspace entry; the supplied hosted SQL migration is still required for a direct database purge and legacy-client write prevention. No hosted execution or immediate physical disk-space reduction is claimed.
+
 ## Retire extra recognition snapshots and publish the company fee as a note
 
 - Stopped capturing original-input/first-machine copies in single/batch/re-recognition and removed the snapshot download. Retained ordinary source records, human edits, current evidence and review ownership.

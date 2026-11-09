@@ -41,7 +41,7 @@ function recognitionFeedback(messages,multi=false,order=null){
  updateRecognitionReview(container,order);
 
 }
-function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||''}
+function fillRecognisedFields(order){for(const key of Object.keys(orderFields))$('#o-'+key).value=(key==='salary'?ZYOrderParser.formatCompanySalary(order[key]):order[key])||'';refreshFeeNote()}
 function beginRecognitionProgress(button){
  if(!button||button.disabled)return null;
  button.disabled=true;button.setAttribute('aria-busy','true');
@@ -108,7 +108,7 @@ window.saveOrder=async function(){
  if(editing)orders=orders.map(o=>o.id===editing?ZYRecognitionArchive.clean({...o,...candidate,...metadata,status:status(candidate.price)}):o);
  else orders=[{...candidate,...metadata,id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(candidate.price)},...orders];
  if(!await persist()){orders=before;return}
- singleRecognitionMeta=null;leaveOrderEditor();window.startBackgroundOrderAudit?.(orders);toast('劳务单已保存');
+ singleRecognitionMeta=null;leaveOrderEditor();toast('劳务单已保存');
 };
 window.copyOrder=async function(id){
  const order=ZYOrderParser.present(orders.find(o=>o.id===id)),problems=ZYOrderParser.validateCompany(order,true);
@@ -121,5 +121,5 @@ window.markOrderReviewed=async function(id){
  const metadata=ZYOrderParser.humanReviewMetadata(record,sessionUser?.username);
  const problems=ZYOrderParser.validateCompany({...ZYOrderParser.present(record),...metadata},true);if(problems.length)return toast(problems[0]);
  const before=orders;orders=orders.map(order=>order.id===id?{...order,...metadata}:order);
- if(!await persist()){orders=before;return;}render();window.startBackgroundOrderAudit?.(orders);toast('公司单已人工核对');
+ if(!await persist()){orders=before;return;}render();toast('公司单已人工核对');
 };

@@ -117,6 +117,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert '备注：劳务，服务费管理费：3.7w全包' in company
             assert company.endswith('以上内容仅供参考，具体信息以面试为准')
             assert '卓亚全包价' not in company
+            assert admin.evaluate("feeNote('8w全包 以上内容仅供参考')").startswith('劳务，服务费管理费：8.0w全包')
             assert admin.evaluate("priceFmt('4w')")=='4.0w'
             assert admin.evaluate("priceFmt('38000')")=='3.8w'
             assert not any(token in company for token in ['23800'])
@@ -131,8 +132,8 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch.every(o=>!("firstRecognition" in o))')
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
-            assert admin.locator('#batch-fields input,#batch-fields textarea,#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
-            assert admin.locator('#batch-fields [id]').evaluate_all('(elements)=>elements.map(e=>e.id.slice(4)).sort()')==admin.evaluate('Object.keys(orderFields).sort()')
+            assert admin.locator('#batch-fields input,#batch-fields textarea:not([readonly]),#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
+            assert admin.locator('#batch-fields [id]:not([readonly])').evaluate_all('(elements)=>elements.map(e=>e.id.slice(4)).sort()')==admin.evaluate('Object.keys(orderFields).sort()')
             admin.locator('#b-0-gender').select_option('女')
             admin.locator('#b-0-requirements').fill('批量备注：工作要求')
             admin.locator('#b-0-language').fill('粤语、英语')
@@ -259,7 +260,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
             assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
-            assert admin.evaluate('o=>ZYOrderAudit.inspect(o).needsReview',reviewed) is False
+            assert admin.evaluate('o=>ZYOrderParser.reviewOrder(o.raw,o).reviewed',reviewed) is True
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',reviewed)==[]
             # Historical acknowledgements survive parser upgrades; one-click review changes metadata only.
             legacy=admin.evaluate("""async(record)=>{const copy={...record,id:'legacy-reviewed-token',code:'ZY-26-1103-97',humanReviewedSource:'',humanReviewedAt:'',humanReviewedBy:'',manualFields:'[]',reviewConfirmation:ZYOrderParser.reviewSignature(record.raw).replace(/^S1-/,'8-')};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",reviewed)
@@ -328,7 +329,10 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位')
             admin.locator('#o-salary').fill('HKD29999')
-            admin.locator('#o-price').fill('4w');admin.evaluate('saveOrder()')
+            admin.locator('#o-price').fill('4w')
+            assert admin.locator('#o-fee-note').input_value()==admin.evaluate("feeNote('4w')")
+            assert admin.locator('#o-fee-note').get_attribute('readonly') is not None
+            admin.evaluate('saveOrder()')
             admin.wait_for_selector('.card',state='attached')
             archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")
             assert 'firstRecognition' not in archive_record
@@ -398,18 +402,10 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.set_viewport_size({'width':390,'height':844});admin.evaluate("go('orders')")
             assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth'),admin.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.tagName,e.className,e.id,Math.round(e.getBoundingClientRect().width)]).slice(0,15)")
             admin.set_viewport_size({'width':1440,'height':1000})
-            # Audit all shared orders without changing revisions, raw sources or manual values.
-            original=admin.evaluate("api('/api/orders')")
-            admin.evaluate('openOrderAudit()')
-            assert '原单识别自查' in admin.locator('#modal').inner_text()
-            assert admin.locator('#modal .recognition-review').count()==len(original['orders'])
-            assert admin.evaluate("api('/api/orders')")==original
-            assert admin.evaluate('typeof downloadOrderAudit')=='undefined'
-            assert not admin.locator('button[onclick="downloadOrderAudit()"]').count()
-            admin.evaluate('openAuditedOrder(0)')
-            assert admin.locator('#o-shift').count()==0
-            assert admin.evaluate("api('/api/orders')")==original,'Audit preview must not write changes'
-            admin.evaluate("editing=null;go('orders')")
+            # Global self-audit has been retired, including its scripts and background entry points.
+            assert admin.evaluate('typeof openOrderAudit')=='undefined'
+            assert admin.evaluate('typeof startBackgroundOrderAudit')=='undefined'
+            assert admin.locator('button[onclick="openOrderAudit()"]').count()==0
             # Purge an old snapshot on workspace entry without changing any business field.
             with sqlite3.connect(path) as seed_db:
                 old_state=seed_db.execute('SELECT orders FROM state WHERE id=1').fetchone()

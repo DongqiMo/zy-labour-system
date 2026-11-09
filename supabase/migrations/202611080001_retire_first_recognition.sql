@@ -17,3 +17,8 @@ create trigger strip_first_recognition before insert or update of orders
 update zy_private.order_state set orders=orders,revision=revision+1
  where exists(select 1 from jsonb_array_elements(orders) item where item ? 'firstRecognition');
 commit;
+
+-- Verification: expect zero retained snapshot copies in active business orders.
+select count(*) as remaining_first_recognition_copies
+from zy_private.order_state s cross join lateral jsonb_array_elements(s.orders) as t(order_data)
+where order_data ? 'firstRecognition';
