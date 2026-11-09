@@ -1,6 +1,7 @@
 /* UI-only localisation. Never rerenders a form or translates business data. */
 (function(){
  const pairs=[
+ ['北京时间','China time'],
  ['团队工作台','Team Workspace'],['劳工登记','Worker Registration'],['搜索职位、单号、雇主、薪资','Search position, code, employer or salary'],['今天','Today'],['本周','This Week'],['全部','All'],['选日期','Choose Date'],['日期范围','Date Range'],['状态筛选','Filter by Status'],['单号','Order Code'],['职位 · 雇主','Position · Employer'],['状态','Status'],['操作','Actions'],['复制','Copy'],['核对','Review'],['填金额','Set Fee'],['未识别','Not Recognised'],['不限','Any'],['更多操作','More Actions'],['选择一份劳务单查看详情','Select an order to view details'],['关闭详情','Close Details'],['全包价','Package Fee'],['暂不能复制发布','Cannot Copy for Publication Yet'],['公司单','Company Copy'],['原单','Source'],['识别来源','Recognition Sources'],['填写全包价','Set Package Fee'],['编辑','Edit'],['我的','My Account'],['关闭','Close'],['劳务单详情','Order Details'],['劳务单列表','Order List'],['劳务单内容','Order Content'],['该劳务单已被删除','This order has been deleted'],
  ['待确认金额','Amount Awaiting Confirmation'],['需核对','Needs Review'],['可发布','Ready to Publish'],['请核对原单和公司单','Review source and company order'],['请先确认金额','Confirm the amount first'],['已人工核对','Human Reviewed'],['放弃未保存的内容？','Discard unsaved changes?'],['确认人工核对','Confirm Human Review'],['待核对提示','Review Notices'],['请先修改以下问题','Correct These Issues First'],['确认已人工核对','Confirm Reviewed'],['订单已变化，请重新打开核对','Order changed. Reopen the review.'],
  ['公司单已人工核对','Company Order Reviewed'],['标记已人工核对','Mark as Reviewed'],
@@ -101,9 +102,8 @@
     }
    });
    document.documentElement.lang=language==='en'?'en':'zh-CN';document.title=language==='en'?'ZY Labour Management System':'卓亚港澳劳务系统';
-   const narrow=matchMedia('(max-width:640px)').matches,options={year:'numeric',month:narrow?'short':'long',day:'numeric',...(narrow?{}:{weekday:'long'})};
-   const date=new Date().toLocaleDateString(language==='en'?'en-CA':'zh-CN',options);
-   for(const id of ['date','login-date'])if(document.getElementById(id))document.getElementById(id).textContent=date;
+   const date=ZYTime.headerDate(language);
+   for(const id of ['date','login-date','business-date'])if(document.getElementById(id))document.getElementById(id).textContent=date+(id==='business-date'?'':' · '+translate('北京时间'));
    document.querySelectorAll('[data-language-toggle]').forEach(button=>{button.textContent=language==='en'?'中文':'English';button.setAttribute('aria-label',language==='en'?'Switch interface to Chinese':'切换界面为英文');button.setAttribute('aria-pressed',String(language==='en'))});
    const loginTools=document.getElementById('login-language');if(loginTools)loginTools.hidden=!document.getElementById('login');
   }finally{observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','hidden']})}

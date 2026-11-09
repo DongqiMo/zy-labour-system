@@ -1,3 +1,12 @@
+## One China business timezone
+
+- Added cached browser/Node `ZYTime` helpers for China dates/parts/display, UTC-only day/month/week arithmetic and literal-date validation. All business date logic now uses this shared utility.
+- Unified company-code dates/sequences, Today/week filters, date groups/calendar counts/highlights, displayed review times, login/list header dates and backup filename dates. Displayed times identify China time in Chinese/English.
+- Replaced the calendar's local Date month with a year/month object. Worker ages use China's current day without converting birth/exit dates; the existing explicit-age preference remains unchanged.
+- Updated the existing narrow legacy V-code repair to use the China year, with counterexamples for valid current codes, invalid calendar dates and timestamp/source immutability. Recognition rules and parser metadata version remain unchanged.
+- Preserved UTC timestamp storage, existing company codes/history, prices, publication text, manual ownership, permissions, elapsed-time clocks and Supabase quota logic. No live-data migration or Supabase deployment is required.
+- Added Node boundary/leap-year/DST-invalid-input coverage and synthetic frozen-clock browser acceptance across Toronto, Shanghai and Auckland, alongside existing parser/workflow/list regressions.
+
 ## UI/UX batch four: unified compact order workspace
 
 - Merged Today and Database into one Orders workspace with canonical `filters.orders` and today/week/all/date ranges. Existing `go('dashboard')` and `go('orders')` remain range aliases. Replaced large cards/counters with a 52px desktop grid, date groups, state chips and a persistent detail pane; retained the shared publication state/cache and existing business actions.

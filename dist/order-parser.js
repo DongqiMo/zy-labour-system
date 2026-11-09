@@ -1,6 +1,7 @@
 /* Staged source-order recognition: segment, classify paragraphs, extract, validate. */
 (function(root){
  const VERSION='17';
+ const businessTime=root.ZYTime||(typeof require==='function'?require('./business-time.js'):null);
  const recognitionText=s=>String(s??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200D\uFEFF]/g,' ');
  const stripDecoration=s=>String(s??'').replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F]/gu,'').replace(/\[(?:红包|紅包|烟花|煙花|玫瑰|庆祝|慶祝|强|強)\]/g,'');
  const escape=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -506,7 +507,7 @@
   const repaired=records.map(order=>({...order,gender:normalizeGender(order.gender,order.raw),salary:cleanField('salary',order.salary)}));
   const used=new Set(records.map(o=>baseCode(o.code)));
   for(const order of repaired){const m=String(order.code||'').match(/^V-(\d{1,2})\.(\d{1,2})-(\d+)$/i);if(!m)continue;
-   const date=new Date(order.createdAt);if(isNaN(date))continue;const month=+m[1],day=+m[2],year=date.getFullYear(),check=new Date(year,month-1,day);if(check.getMonth()!==month-1||check.getDate()!==day)continue;
+   const date=businessTime.parts(order.createdAt);if(!date)continue;const month=+m[1],day=+m[2],year=date.year,info=businessTime.monthInfo(year,month);if(!info||day<1||day>info.daysInMonth)continue;
    const prefix=`ZY-${String(year).slice(-2)}-${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}-`;let candidate=prefix+String(+m[3]).padStart(2,'0');
    if(used.has(candidate))candidate=prefix+String(Math.max(0,...[...used].filter(c=>c.startsWith(prefix)).map(c=>Number(c.slice(prefix.length))||0))+1).padStart(2,'0');
    used.add(candidate);order.code=companyCode(candidate,order.sourcePrefix);

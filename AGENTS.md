@@ -19,3 +19,7 @@ Keep source archives and existing manual edits intact. No bulk recognition rewri
 ## Communication and documentation
 
 Repository documentation is in English. Chinese business examples and interface strings remain where functionally required. Website changes retain the Chinese/English interface switch and never translate business records automatically. Update `docs/update-log.md` when behavior changes. Provide the website link after verified deployment; do not provide screenshots unless requested.
+
+## Business dates
+
+Business dates and displayed times use `Asia/Shanghai` exclusively through `ZYTime`. Keep stored instants in UTC and preserve literal worker calendar dates; never use device-local date arithmetic for business rules.

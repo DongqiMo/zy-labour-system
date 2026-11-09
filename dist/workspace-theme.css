@@ -44,3 +44,5 @@ main{margin-left:var(--sidebar-width);min-width:0}#content{padding:var(--layout-
 body:has(#detail-overlay[open]){overflow:hidden}
 .row-status{overflow:hidden!important}.row-status .state-badge{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:24px}
 @media(max-width:639px){.mobile-row-badge{max-width:110px;overflow:hidden}.mobile-row-badge .state-badge{display:block;overflow:hidden;text-overflow:ellipsis;line-height:20px}}
+.order-heading{min-width:0}.business-clock{font-size:var(--font-label);color:var(--text-muted);line-height:1.5;margin-top:4px}.business-clock time{overflow-wrap:anywhere}
+@media(max-width:639px){.order-heading{grid-row:1;grid-column:1}.order-tools h1{font-size:var(--font-detail)}.business-clock{font-size:var(--font-label)}}

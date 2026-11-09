@@ -376,7 +376,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('filters.orders.q')==nav_order['code']
             admin.evaluate("filters.orders.q='';filters.orders.q='';go('orders')")
             # Calendar starts collapsed on entry, highlights today, and stays open during date selection.
-            admin.evaluate("filters.orders.date='';orderCalendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);go('orders')")
+            admin.evaluate("filters.orders.date='';orderCalendarMonth=(({year,month})=>({year,month}))(ZYTime.parts(new Date()));go('orders')")
             assert not admin.locator('.calendar-panel').evaluate('(el)=>el.open')
             admin.locator('[data-range="date"]').click()
             assert admin.locator('.calendar-day.calendar-today').count()==1
