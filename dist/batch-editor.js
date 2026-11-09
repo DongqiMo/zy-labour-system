@@ -59,5 +59,5 @@ window.saveBatch=async function(){
  }
  const added=batch.map(o=>ZYOrderParser.sanitizeCompany({...Object.fromEntries(Object.keys(orderFields).map(k=>[k,String(o[k]??'').trim()])),raw:ZYOrderParser.sanitizeRaw(o.raw),sourcePrefix:o.sourcePrefix||'',...recognitionMetadata(o,o),id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(o.price)})).map(record=>({...record,salary:ZYOrderParser.formatCompanySalary(record.salary),price:priceN(record.price)>0?priceFmt(record.price):''}));
  const old=orders;orders=added.concat(orders);if(!await persist()){orders=old;return}
- batch=[];batchInput='';activeBatch=0;go('orders');toast('批量劳务单已保存');
+ batch=[];batchInput='';activeBatch=0;go('orders',{preserveOrders:true});showSavedOrder(added[0].id);toast('批量劳务单已保存');
 };

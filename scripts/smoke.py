@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 assert page.locator('#loginForm button').inner_text()=='Sign In'
                 page.locator('#login-language [data-language-toggle]').click()
                 page.locator('#loginForm button').click();page.wait_for_selector('#syncStatus')
-                assert page.locator('.card').count()==0,'Shared mode must not create seed orders'
+                assert page.locator('.order-row').count()==0,'Shared mode must not create seed orders'
                 for selector in ['html','body','main','#content']:
                     assert page.locator(selector).evaluate('(e)=>getComputedStyle(e).backgroundColor')=='rgb(238, 243, 248)'
             staff.evaluate("go('new')")
@@ -49,11 +49,13 @@ with tempfile.TemporaryDirectory() as tmp:
             set_amount(staff,'#o-price','3.8w');staff.evaluate('saveOrder()')
             assert '请选择招聘性别' in staff.locator('.toast').inner_text()
             assert staff.evaluate('orders.length')==0
-            staff.locator('#o-gender').select_option('男女不限');staff.evaluate('saveOrder()');staff.wait_for_selector('.card',state='attached')
-            admin.evaluate('syncShared()');admin.wait_for_selector('.card',state='attached');assert '共享厨师' in admin.locator('.card').inner_text()
+            staff.locator('#o-gender').select_option('男女不限');staff.evaluate('saveOrder()');staff.wait_for_selector('.order-row',state='attached')
+            assert staff.evaluate('filters.orders.range')=='today' and staff.evaluate('selectedOrderId===orders[0].id')
+            assert staff.locator('#order-detail.has-order').count()==1
+            admin.evaluate('syncShared()');admin.wait_for_selector('.order-row',state='attached');assert '共享厨师' in admin.locator('.order-row').inner_text()
             # Two editors started from the same revision: second save must not overwrite.
             for page in [admin,staff]:page.evaluate('editOrder(orders[0].id)')
-            staff.locator('#o-title').fill('同事已修订');staff.evaluate('saveOrder()');staff.wait_for_selector('.card',state='attached')
+            staff.locator('#o-title').fill('同事已修订');staff.evaluate('saveOrder()');staff.wait_for_selector('.order-row',state='attached')
             admin.locator('#o-title').fill('过期修改');admin.evaluate('saveOrder()')
             assert admin.locator('#o-title').input_value()=='过期修改'
             assert '其他人已修改' in admin.locator('.toast').inner_text()
@@ -70,19 +72,19 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('previewWorker(workers[0])');assert admin.locator('dialog[open]').count()==1
             admin.evaluate("document.querySelector('#modal').close()")
             # Every operation page translates, while entered business values remain untouched.
-            admin.locator('header [data-language-toggle]').click()
-            for target,heading in [('dashboard','Today’s Orders'),('orders','Order Database'),('workers','Worker Registration'),('workerRecords','Registered Workers')]:
+            admin.locator('aside footer [data-language-toggle]').click()
+            for target,heading in [('dashboard','Labour Orders'),('orders','Labour Orders'),('workers','Worker Registration'),('workerRecords','Registered Workers')]:
                 admin.evaluate('(target)=>go(target)',target)
                 admin.wait_for_function('(heading)=>document.querySelector("h1")?.textContent===heading',arg=heading)
                 untranslated=admin.evaluate("""()=>{const found=[];const w=document.createTreeWalker(document.querySelector('#content'),NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){if(!n.parentElement.closest('[data-user-content],pre,textarea,input,script,style')&&/[\u3400-\u9fff]/.test(n.nodeValue))found.push(n.nodeValue.trim())}return found}""")
                 assert not untranslated,(target,untranslated)
             admin.evaluate("worker={};go('workers')")
             admin.locator('#w-name').fill('未保存姓名：工作要求');admin.locator('#w-phone').fill('12345678')
-            admin.locator('header [data-language-toggle]').click()
+            admin.locator('aside footer [data-language-toggle]').click()
             assert admin.locator('#w-name').input_value()=='未保存姓名：工作要求'
-            admin.locator('header [data-language-toggle]').click()
+            admin.locator('aside footer [data-language-toggle]').click()
             assert admin.locator('#w-name').input_value()=='未保存姓名：工作要求'
-            admin.locator('header [data-language-toggle]').click()
+            admin.locator('aside footer [data-language-toggle]').click()
             # Account management UI and staff restrictions.
             admin.evaluate('accountDialog()');admin.wait_for_selector('#userForm')
             assert 'colleague' in admin.locator('#teamUsers').inner_text()
@@ -115,7 +117,7 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             assert 'HKD17118' in admin.locator('.source-table').first.inner_text()
             set_amount(admin,'#o-price','3.7w')
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             company=admin.evaluate('publish(orders[0])')
             assert '工资待遇：HKD17118' in company
             assert '底15500+1618津贴' in company
@@ -150,7 +152,7 @@ with tempfile.TemporaryDirectory() as tmp:
             set_amount(admin,'#b-0-price','')
             before=admin.evaluate('JSON.stringify(batch)')
             source=admin.locator('#batch-item-raw').input_value()
-            admin.locator('header [data-language-toggle]').click()
+            admin.locator('aside footer [data-language-toggle]').click()
             assert admin.locator('h1').inner_text()=='Prepare New Order'
             assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
             assert admin.locator('#batch-item-raw').input_value()==source
@@ -164,8 +166,10 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('selectBatchItem(0)')
             assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
             assert admin.locator('#b-0-language').input_value()=='粤语、英语'
-            admin.locator('header [data-language-toggle]').click()
-            admin.evaluate('saveBatch()');admin.wait_for_selector('.card',state='attached')
+            admin.locator('aside footer [data-language-toggle]').click()
+            admin.evaluate('saveBatch()');admin.wait_for_selector('.order-row',state='attached')
+            assert admin.evaluate('filters.orders.range')=='today' and admin.evaluate('selectedOrderId===orders[0].id')
+            assert admin.locator('#order-detail.has-order').count()==1
             assert admin.evaluate("orders.slice(0,2).map(o=>o.gender)")==['女','男']
             assert admin.evaluate('orders.slice(0,2).map(o=>o.status)')==['draft','ready']
             assert admin.evaluate('orders[0].requirements')=='批量备注：工作要求'
@@ -175,12 +179,14 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
             admin.evaluate("""async()=>{const old={...orders[0],id:'legacy-kitchen',code:'V-11.3-01',title:'西餐帮厨',gender:'要求】 男',salary:'薪酬】 16310/月',createdAt:'2026-11-03T08:00:00Z',raw:'【岗位】西餐帮厨\\n【性别要求】男\\n【工资薪酬】16310/月'};const result=await api('/api/orders',{method:'PUT',body:{orders:[old,...orders],revision}});revision=result.revision}""")
-            admin.locator('header [data-language-toggle]').click()
+            admin.locator('aside footer [data-language-toggle]').click()
             admin.reload();admin.wait_for_selector('#syncStatus')
             assert admin.evaluate('ZYI18n.language')=='en'
             admin.set_viewport_size({'width':390,'height':844})
             assert admin.evaluate('document.documentElement.scrollWidth<=innerWidth'),admin.evaluate("Array.from(document.querySelectorAll('body *')).filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.tagName,e.className,e.id,Math.round(e.getBoundingClientRect().width)]).slice(0,15)")
-            admin.locator('header [data-language-toggle]').click()
+            admin.evaluate("go('workerRecords')");admin.wait_for_selector('.workerrow')
+            admin.locator('.mobile-account-trigger').click();admin.locator('#modal [data-language-toggle]').click()
+            admin.evaluate("document.querySelector('#modal').close()")
             fixed=admin.evaluate("orders.find(o=>o.id==='legacy-kitchen')")
             assert fixed['code'].startswith('ZY-26-1103-')
             assert fixed['gender']=='男' and fixed['salary']=='16310/月'
@@ -216,7 +222,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert '2500' in admin.locator('#o-notes').input_value()
             unchanged=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
             assert unchanged['title']=='（批文厨房帮工）'
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             saved=admin.evaluate("api('/api/orders').then(x=>x.orders.find(o=>o.id==='recognition-preview'))")
             assert saved['code']=='ZY-26-1103-81 SUPPLIER' and saved['sourcePrefix']=='SUPPLIER'
             assert saved['title']=='砧板师傅' and saved['salary']=='HKD19000；津贴：HKD500' and saved['raw']==source
@@ -224,14 +230,14 @@ with tempfile.TemporaryDirectory() as tmp:
             # Manual removal/replacement of supplier suffix survives save, reload, and re-recognition.
             admin.evaluate("editOrder(orders.find(o=>o.code==='ZY-26-1103-81 SUPPLIER').id)")
             admin.locator('#o-code').fill('ZY-26-1103-81')
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             saved=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.code==='ZY-26-1103-81'))")
             assert saved and saved['sourcePrefix']=='SUPPLIER'
             assert admin.evaluate('o=>publish(o)',saved).startswith('ZY-26-1103-81｜')
             admin.evaluate("editOrder(orders.find(o=>o.code==='ZY-26-1103-81').id);reparseExistingOrder()")
             assert admin.locator('#o-code').input_value()=='ZY-26-1103-81'
             admin.locator('#o-code').fill('ZY-26-1103-81 OTHER');admin.evaluate('saveOrder()')
-            admin.wait_for_selector('.card',state='attached')
+            admin.wait_for_selector('.order-row',state='attached')
             assert admin.evaluate("api('/api/orders').then(r=>r.orders.some(o=>o.code==='ZY-26-1103-81 OTHER'))")
             # Shared v8 mechanism: whole-source review, internal exclusions and explicit publication acknowledgement.
             import json
@@ -246,31 +252,31 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('.recognition-review > summary').click()
             assert '住扣封顶20%' in admin.locator('.source-table').first.inner_text()
             assert admin.locator('.recognition-review details').count()==1
-            set_amount(admin,'#o-price','4.2w');admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            set_amount(admin,'#o-price','4.2w');admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             released=admin.evaluate("publish(orders[0])")
             assert 'HKD17770+' in released and '出报价单' in released
             assert not any(value in released for value in ['2K','2.82','劳务费900','recognitionAudit'])
             unknown=next(case['source'] for case in mechanism_cases if case['id']=='REC-005')
             admin.evaluate("editing=null;mode='single';go('new')")
             admin.locator('#raw').fill(unknown);admin.evaluate('autoParse()');set_amount(admin,'#o-price','4w')
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             pending=admin.evaluate('orders[0].id')
             assert admin.evaluate("ZYOrderParser.validateCompany(orders[0],true).includes('请先核对未分类或冲突内容并确认')")
             admin.evaluate('editOrder(orders[0].id)')
             admin.locator('#o-notes').fill('附加条件已核实')
             admin.locator('.recognition-review > summary').click()
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             reviewed=admin.evaluate("id=>api('/api/orders').then(result=>result.orders.find(o=>o.id===id))",pending)
             assert reviewed['raw']==unknown and reviewed['parserVersion']=='17'
             assert isinstance(reviewed['recognitionAudit'],str) and reviewed['reviewConfirmation'] and reviewed['humanReviewedSource']
-            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
+            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.evaluate('publish(orders[0])')
             assert admin.evaluate('o=>publish(o)',reviewed).startswith(reviewed['code'])
             assert admin.evaluate('o=>ZYOrderParser.reviewOrder(o.raw,o).reviewed',reviewed) is True
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',reviewed)==[]
             # Historical acknowledgements survive parser upgrades; one-click review changes metadata only.
             legacy=admin.evaluate("""async(record)=>{const copy={...record,id:'legacy-reviewed-token',code:'ZY-26-1103-97',humanReviewedSource:'',humanReviewedAt:'',humanReviewedBy:'',manualFields:'[]',reviewConfirmation:ZYOrderParser.reviewSignature(record.raw).replace(/^S1-/,'8-')};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",reviewed)
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true)',legacy)==[]
-            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.locator('.card').first.inner_text()
+            assert '这份原单需要重新核对，暂不能生成发布稿' not in admin.evaluate('publish(orders[0])')
             unmarked=admin.evaluate("""async(record)=>{const copy={...record,id:'unmarked-reviewed-order',code:'ZY-26-1103-98',reviewConfirmation:''};const result=await api('/api/orders',{method:'PUT',body:{orders:[copy,...orders],revision}});orders=[copy,...orders];revision=result.revision;go('orders');return copy}""",legacy)
             assert admin.evaluate('o=>ZYOrderParser.validateCompany(o,true).length>0',unmarked)
             admin.evaluate("markOrderReviewed('unmarked-reviewed-order')")
@@ -344,34 +350,35 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('#o-price').is_hidden()
             assert admin.locator('label').filter(has_text='备注金额（').count()==0
             admin.evaluate('saveOrder()')
-            admin.wait_for_selector('.card',state='attached')
+            admin.wait_for_selector('.order-row',state='attached')
             archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")
             assert 'firstRecognition' not in archive_record
             assert admin.evaluate("o=>publish(o)",archive_record).find('firstRecognition')==-1
             admin.evaluate("id=>editOrder(id)",archive_record['id']);admin.evaluate('reparseExistingOrder()')
             assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位二')
-            admin.evaluate('saveOrder()');admin.wait_for_selector('.card',state='attached')
+            admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
             assert admin.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id))",archive_record['id']).get('firstRecognition') is None
             assert staff.evaluate("id=>api('/api/orders').then(r=>r.orders.find(o=>o.id===id))",archive_record['id']).get('firstRecognition') is None
             # Saving/cancelling an edit returns to its originating order list and preserves filters.
             nav_order=admin.evaluate("orders.find(o=>day(o.createdAt)===today()&&o.title&&o.salary&&o.gender)")
             assert nav_order
-            admin.evaluate("o=>{filters.dashboard.q=o.code;filters.dashboard.s='';go('dashboard');editOrder(o.id)}",nav_order)
+            admin.evaluate("o=>{filters.orders.q=o.code;filters.orders.s='';go('dashboard');editOrder(o.id)}",nav_order)
             admin.locator('#o-notes').fill('导航核对已完成')
-            admin.evaluate('saveOrder()');admin.wait_for_function("view==='dashboard'")
-            assert admin.evaluate('filters.dashboard.q')==nav_order['code']
+            admin.evaluate('saveOrder()');admin.wait_for_function("view==='orders'")
+            assert admin.evaluate('filters.orders.q')==nav_order['code']
+            assert admin.evaluate('filters.orders.range')=='today'
             assert admin.evaluate("orders.find(o=>o.id==='"+nav_order['id']+"').notes")=='导航核对已完成'
             admin.evaluate("id=>editOrder(id)",nav_order['id']);admin.evaluate('leaveOrderEditor()')
-            assert admin.evaluate('view')=='dashboard'
+            assert admin.evaluate('view')=='orders'
             admin.evaluate("o=>{filters.orders.q=o.code;go('orders');editOrder(o.id)}",nav_order)
             admin.evaluate('saveOrder()');admin.wait_for_function("view==='orders'")
             assert admin.evaluate('filters.orders.q')==nav_order['code']
-            admin.evaluate("filters.orders.q='';filters.dashboard.q='';go('orders')")
+            admin.evaluate("filters.orders.q='';filters.orders.q='';go('orders')")
             # Calendar starts collapsed on entry, highlights today, and stays open during date selection.
             admin.evaluate("filters.orders.date='';orderCalendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);go('orders')")
             assert not admin.locator('.calendar-panel').evaluate('(el)=>el.open')
-            admin.locator('.calendar-panel > summary').click()
+            admin.locator('[data-range="date"]').click()
             assert admin.locator('.calendar-day.calendar-today').count()==1
             assert admin.locator('.calendar-day.calendar-today').get_attribute('aria-current')=='date'
             colours=admin.evaluate("()=>[getComputedStyle(document.querySelector('.calendar-today')).backgroundColor,getComputedStyle(document.querySelector('.calendar-day:not(.calendar-today)')).backgroundColor]")
@@ -389,9 +396,9 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate("expandedOrderDates.clear();go('orders')")
             assert admin.locator('.order-date-group').count()>0
             assert admin.locator('.order-date-group[open]').count()==0
-            assert not admin.locator('.order-date-group .card').first.is_visible()
+            assert not admin.locator('.order-date-group .order-row').first.is_visible()
             admin.locator('.order-date-group > summary').first.click()
-            assert admin.locator('.order-date-group .card').first.is_visible()
+            assert admin.locator('.order-date-group .order-row').first.is_visible()
             admin.evaluate('listRender()')
             assert admin.locator('.order-date-group[open]').count()==1
             admin.locator('.order-date-group > summary').first.click()
@@ -402,11 +409,11 @@ with tempfile.TemporaryDirectory() as tmp:
                       {...saved[0],id:'cal-b',code:'ZY-26-1102-02 CV',createdAt:'2026-11-02T12:00:00',title:'日历厨师',status:'draft'}];
               filters.orders={q:'',s:'',date:''};go('orders');
               const groups=document.querySelectorAll('.nav-group').length;
-              selectOrderDate('2026-11-01');const first=document.querySelectorAll('.card').length;
+              selectOrderDate('2026-11-01');const first=document.querySelectorAll('.order-row').length;
               const count=document.querySelector('[data-date="2026-11-01"] small').textContent;
-              filters.orders.q='qY';listRender();const codeMatch=document.querySelectorAll('.card').length;
-              filters.orders.s='draft';listRender();const mismatch=document.querySelectorAll('.card').length;
-              filters.orders.s='';selectOrderDate('');const cleared=document.querySelectorAll('.card').length;
+              filters.orders.q='qY';listRender();const codeMatch=document.querySelectorAll('.order-row').length;
+              filters.orders.s='draft';listRender();const mismatch=document.querySelectorAll('.order-row').length;
+              filters.orders.s='';selectOrderDate('');const cleared=document.querySelectorAll('.order-row').length;
               const noFold=!document.querySelector('#nav details');orders=saved;filters.orders=f;go('orders');
               return {groups,first,count,codeMatch,mismatch,cleared,noFold};}""")
             assert checks==dict(groups=2,first=1,count='1',codeMatch=1,mismatch=0,cleared=1,noFold=True),checks

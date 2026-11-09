@@ -43,16 +43,18 @@ with tempfile.TemporaryDirectory() as tmp:
                 const saved=await api('/api/orders',{method:'PUT',body:{orders:[draft,review,ready,legacy],revision}});orders=[draft,review,ready,legacy];revision=saved.revision;go('dashboard');
             }''', review_source)
             assert page.evaluate('orders.map(orderState)') == ['draft','review','ready','ready']
-            assert page.locator('.stats .stat').count() == 4
-            assert page.evaluate("[...document.querySelectorAll('.stats strong')].map(e=>parseInt(e.textContent))") == [4,1,1,2]
+            assert page.locator('.state-chip').count() == 4
+            assert page.evaluate("[...document.querySelectorAll('.state-chip b')].map(e=>parseInt(e.textContent))") == [4,1,1,2]
             for state,count in [('draft',1),('review',1),('ready',2)]:
-                page.locator('.toolbar select').select_option(state)
-                assert page.locator('.order-card').count() == count
-                assert all(text == {'draft':'待确认金额','review':'需核对','ready':'可发布'}[state] for text in page.locator('.price>.badge').all_inner_texts())
-                assert page.locator('button[onclick^="copyOrder"]').count() == (count if state=='ready' else 0)
-            page.locator('.toolbar select').select_option('')
-            assert page.locator('[data-order-id="flow-review"] .publication-problems li').count() > 0
-            assert page.locator('[data-order-id="flow-legacy"] .reviewed-stamp').inner_text() == '已人工核对'
+                page.locator(f'[data-filter-state="{state}"]').click()
+                assert page.locator('.order-row').count() == count
+                assert all(text == {'draft':'待确认金额','review':'需核对','ready':'可发布'}[state] for text in page.locator('.row-status>.state-badge').all_inner_texts())
+                assert page.locator('.order-row button[onclick^="copyOrder"]').count() == (count if state=='ready' else 0)
+            page.locator('[data-filter-state=""]').click()
+            page.evaluate("openOrderDetail('flow-review')")
+            assert page.locator('#order-detail .publication-problems li').count() > 0
+            page.evaluate("openOrderDetail('flow-legacy')")
+            assert page.locator('#order-detail .reviewed-stamp').inner_text().strip('✓ ') == '已人工核对'
             # Content-keyed validation cache invalidates on an in-place field change.
             page.evaluate('''() => {window.nativeValidate=ZYOrderParser.validateCompany;window.validations=0;ZYOrderParser.validateCompany=(...args)=>{validations++;return nativeValidate(...args)};window.cachedOrder={...orders.find(o=>o.id==='flow-ready'),id:'cache-only'};orderState(cachedOrder);orderState(cachedOrder)}''')
             assert page.evaluate('validations') == 1
@@ -60,12 +62,12 @@ with tempfile.TemporaryDirectory() as tmp:
             assert page.evaluate('validations') == 2
             page.evaluate('() => {ZYOrderParser.validateCompany=nativeValidate}')
             # No-extra-items case and English UI protect source/reviewer business values.
-            page.evaluate("markOrderReviewed('flow-ready')")
+            page.evaluate("openOrderDetail('flow-ready');markOrderReviewed('flow-ready')")
             assert '未发现额外核对项目，仍请确认识别结果。' in page.locator('#modal').inner_text()
             page.evaluate("document.querySelector('[data-language-toggle]').click()")
             page.wait_for_function("() => document.querySelector('#modal h2').textContent==='Confirm Human Review'")
             assert page.locator('#modal [data-user-content]').first.inner_text().startswith('ZY-26-1109-03')
-            assert 'reviewer' in page.locator('[data-order-id="flow-ready"] .reviewed-stamp [data-user-content]').first.inner_text()
+            assert 'reviewer' in page.locator('#order-detail .reviewed-stamp [data-user-content]').first.inner_text()
             page.evaluate("document.querySelector('#modal').close();document.querySelector('[data-language-toggle]').click()")
             before = page.evaluate("api('/api/orders')")
             page.evaluate("copyOrder('flow-review')")
@@ -86,7 +88,8 @@ with tempfile.TemporaryDirectory() as tmp:
             assert all(reviewed[key]==prior[key] for key in ['raw','title','salary','gender','price','status'])
             assert reviewed['humanReviewedBy']=='reviewer' and reviewed['humanReviewedAt']
             assert page.evaluate("orderState(orders.find(o=>o.id==='flow-review'))")=='ready'
-            assert 'reviewer' in page.locator('[data-order-id="flow-review"] .reviewed-stamp').inner_text()
+            page.evaluate("openOrderDetail('flow-review')")
+            assert 'reviewer' in page.locator('#order-detail .reviewed-stamp').inner_text()
             page.evaluate("orders.push({...orders[0],id:'blocked-review',raw:'岗位：资料协调专岗；工资：HK22000',price:'4.2w',gender:''});markOrderReviewed('blocked-review')")
             assert page.locator('#confirm-order-review').count() == 0
             assert '请选择招聘性别' in page.locator('#modal').inner_text()

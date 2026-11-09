@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "python3 server/app.py serve --dev",
-    "check": "node scripts/check.mjs && node --check dist/shared.js && node --check dist/workflow-guards.js && node --check dist/supabase-adapter.js && node --check dist/order-parser.js && node --check dist/batch-editor.js && node --check dist/i18n.js && node --check dist/order-recognition.js && node --check dist/worker-registration.js && node --check dist/recognition-archive.js && node --check dist/ai-recognition.js",
+    "check": "node scripts/check.mjs && node --check dist/shared.js && node --check dist/order-list.js && node --check dist/workflow-guards.js && node --check dist/supabase-adapter.js && node --check dist/order-parser.js && node --check dist/batch-editor.js && node --check dist/i18n.js && node --check dist/order-recognition.js && node --check dist/worker-registration.js && node --check dist/recognition-archive.js && node --check dist/ai-recognition.js",
     "test": "python3 -m unittest discover -s tests -v",
     "start:static": "python3 -m http.server 8080 --directory dist",
     "test:postgres": "node tests/postgres.mjs",

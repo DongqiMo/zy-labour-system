@@ -12,7 +12,7 @@ window.newView=function(){
  if(editing){feedback.innerHTML=recognitionReviewMarkup(singleRecognitionMeta);const button=document.createElement('button');button.type='button';button.textContent='按原单重新识别（预览）';button.onclick=reparseExistingOrder;raw.parentElement.querySelector('.note').before(button)}
 };
 const recognitionExclusionReasons={supplier_package_quote:'上家全包报价',upstream_fee:'上家收费信息',supplier_footer:'上家尾部报价',unlabelled_amount:'无标签金额或算式',promotional_heading:'宣传提示'};
-function recognitionReviewMarkup(order,batchIndex=-1){
+function recognitionReviewMarkup(order,batchIndex=-1,embedded=false){
  if(!order)return '';
  const report=ZYOrderParser.reviewOrder(order.raw||'',order);
  const reasons=recognitionExclusionReasons;
@@ -20,7 +20,7 @@ function recognitionReviewMarkup(order,batchIndex=-1){
  const conflicts=report.conflicts.map(entry=>`<p data-user-content>${esc(entry.text)}</p>`).join('');
  const confirmed=ZYOrderParser.isHumanReviewed(order)||ZYOrderParser.hasReviewConfirmation(order);
  const rows=Object.entries(report.sources).filter(([key])=>Object.hasOwn(orderFields,key)).map(([key,lines])=>`<tr><th>${esc(orderFields[key].replace('*',''))}</th><td data-user-content>${lines.map(line=>esc(line)).join('<br>')}</td></tr>`).join('');
- return `<details class="recognition-review"><summary>字段来源与待核对清单</summary><div class="recognition-body">${report.reviewed?'<p class="note">公司单已人工核对</p>':''}<p>来源为识别时的原文片段；手动修改后请重新核对。</p>${report.warnings.length?`<ul>${report.warnings.map(text=>`<li>${esc(text)}</li>`).join('')}</ul>`:'<p>未发现额外核对项目，仍请确认识别结果。</p>'}${rows?`<table class="source-table"><tbody>${rows}</tbody></table>`:''}${excluded?`<details><summary>已排除内容与原因</summary><table class="source-table"><tbody>${excluded}</tbody></table></details>`:''}${conflicts?`<h3>冲突内容</h3>${conflicts}`:''}${report.needsAcknowledgement?`<label class="review-confirm"><input type="checkbox" ${confirmed?'checked':''} onchange="confirmRecognitionReview(this.checked,${batchIndex})"><span>已核对未分类和冲突内容，必要信息已补入公司单</span></label>`:''}${report.unclassified.length?`<h3>未分类内容</h3><p data-user-content>${report.unclassified.map(line=>esc(line)).join('<br>')}</p>`:''}</div></details>`;
+ return `${embedded?'<section class="recognition-review embedded-review">':'<details class="recognition-review"><summary>字段来源与待核对清单</summary>'}<div class="recognition-body">${report.reviewed?'<p class="note">公司单已人工核对</p>':''}<p>来源为识别时的原文片段；手动修改后请重新核对。</p>${report.warnings.length?`<ul>${report.warnings.map(text=>`<li>${esc(text)}</li>`).join('')}</ul>`:'<p>未发现额外核对项目，仍请确认识别结果。</p>'}${rows?`<table class="source-table"><tbody>${rows}</tbody></table>`:''}${excluded?`<details><summary>已排除内容与原因</summary><table class="source-table"><tbody>${excluded}</tbody></table></details>`:''}${conflicts?`<h3>冲突内容</h3>${conflicts}`:''}${report.needsAcknowledgement&&!embedded?`<label class="review-confirm"><input type="checkbox" ${confirmed?'checked':''} onchange="confirmRecognitionReview(this.checked,${batchIndex})"><span>已核对未分类和冲突内容，必要信息已补入公司单</span></label>`:''}${report.unclassified.length?`<h3>未分类内容</h3><p data-user-content>${report.unclassified.map(line=>esc(line)).join('<br>')}</p>`:''}</div>${embedded?'</section>':'</details>'}`;
 }
 function updateRecognitionReview(container,order,index=-1){
  const existing=container.querySelector('.recognition-review');
@@ -109,7 +109,7 @@ window.saveOrder=async function(){
  if(editing)orders=orders.map(o=>o.id===editing?ZYRecognitionArchive.clean({...o,...candidate,...metadata,status:status(candidate.price)}):o);
  else orders=[{...candidate,...metadata,id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(candidate.price)},...orders];
  if(!await persist()){orders=before;return}
- singleRecognitionMeta=null;leaveOrderEditor();toast('劳务单已保存');
+ const savedId=editing||orders[0].id,wasEditing=!!editing;singleRecognitionMeta=null;leaveOrderEditor();if(!wasEditing)showSavedOrder(savedId);toast('劳务单已保存');
 };
 window.copyOrder=async function(id){
  const record=orders.find(o=>o.id===id);if(!record)return;

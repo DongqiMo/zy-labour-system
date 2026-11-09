@@ -1,3 +1,13 @@
+## UI/UX batch four: unified compact order workspace
+
+- Merged Today and Database into one Orders workspace with canonical `filters.orders` and today/week/all/date ranges. Existing `go('dashboard')` and `go('orders')` remain range aliases. Replaced large cards/counters with a 52px desktop grid, date groups, state chips and a persistent detail pane; retained the shared publication state/cache and existing business actions.
+- Added 200ms debounced position/code/employer/salary search, date-range counters, the existing calendar with today highlighting and default collapse, and remembered All-range date groups. Implemented the earlier taskbook's 3.1, 3.3 and 3.4 in this batch.
+- Added company/source/recognition tabs with read-only embedded provenance, existing human-review confirmation and fee dialogs, reviewer metadata, exact publication blockers, and contextual menus with deletion last. Kept selection, tabs, scroll and keyboard focus during list refreshes; retained filters/selection when returning from edits and selected new single/batch records on today's list after save.
+- Replaced the old top header with the compact sidebar shell; moved language/account controls to its footer and a discoverable mobile My Account menu. Added a three-item 68px phone navigation, floating creation button and raised toast placement.
+- Added native modal details: right drawer below 1100px and bottom sheet below 640px, with Escape/backdrop/close handling, keyboard focus containment/restoration, accessible tabs, reduced motion and shared color/size tokens. Phone controls use at least 44px hit areas and 12px text even where smaller visual dimensions were suggested in the design.
+- Updated old browser selectors for rows, merged headings/ranges, chips, relocated language controls and calendar launching; retained their original business and permission assertions. Added dedicated synthetic list acceptance for layout, dates/counts/search, state actions, menus, sync/edit retention, keyboard focus, 375/390px layouts and English data protection.
+- Recognition, pricing, publication wording, validation, manual ownership and authenticated persistence remain unchanged. No live data is modified and no Supabase deployment/migration is required. Other unrequested batches remain deferred.
+
 ## UI/UX batch one: consistent publication states and unsaved-content protection
 
 - Unified badges, four today counters, status filtering and copy authorization around amount plus the existing publication validator. Kept persisted status and historical/manual review precedence; cached presented/validated records by content and exposed exact blockers in company details.

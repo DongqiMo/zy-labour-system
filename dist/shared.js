@@ -12,7 +12,7 @@ async function api(path,{method='GET',body}={}){
 function loginScreen(message=''){
  window.ZYAI?.reset();
   sessionUser=null;csrf='';orders=[];workers=[];worker={};editing=null;batch=[];
-  $('#modal').close();$('#modal').innerHTML='';$('aside').hidden=true;$('main').hidden=true;
+  hideDetailOverlay();closeOrderMenu();selectedOrderId=null;orderListReturn=null;$('#modal').close();$('#modal').innerHTML='';$('aside').hidden=true;$('main').hidden=true;
   $('#login')?.remove();const box=document.createElement('section');box.id='login';box.style='max-width:440px;margin:12vh auto;padding:30px;background:#fff';
   box.innerHTML=`<img class="login-logo" src="logo.png" alt="卓亚 Logo" width="129" height="126"><div class="eyebrow">ZY LABOUR SYSTEM · 团队工作台</div><h1>卓亚港澳劳务</h1><p>登录后与团队共同管理劳务单及劳工资料。</p><form id="loginForm"><label>账号<input name="username" type="${cloudMode?'email':'text'}" placeholder="${cloudMode?'团队账号邮箱':'账号'}" autocomplete="username" required></label><label style="margin-top:18px">密码<input name="password" type="password" autocomplete="current-password" required></label><p id="loginError" role="alert" style="color:#ac4343">${esc(message)}</p><button class="primary" type="submit">登录工作台</button></form><p>账号由管理员开通。请勿在公共设备保存密码。</p>`;
   document.body.append(box);$('#loginForm').onsubmit=async event=>{event.preventDefault();const button=box.querySelector('button');button.disabled=true;try{const form=new FormData(event.target);const data=await api('/api/login',{method:'POST',body:{username:form.get('username'),password:form.get('password')}});await enterWorkspace(data)}catch(e){$('#loginError').textContent=e.message}finally{button.disabled=false}};
@@ -27,8 +27,8 @@ async function enterWorkspace(data){
   }
   orders=result.orders;revision=result.revision;
   $('#login')?.remove();$('aside').hidden=false;$('main').hidden=false;
-  $('aside footer').innerHTML=`<span><span data-user-content>${esc(sessionUser.username)}</span> · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div>`;
-  worker={};editing=null;go('dashboard');lastSync=Date.now();
+  $('aside footer').innerHTML=`<span><span data-user-content>${esc(sessionUser.username)}</span> · ${sessionUser.role==='admin'?'管理员':'员工'}</span><div class="actions"><button onclick="accountDialog()">账号设置</button><button onclick="logout()">退出</button></div><div id="syncStatus" style="margin-top:10px">团队资料已连接</div><button type="button" data-language-toggle onclick="ZYI18n.toggle()">English</button>`;
+  worker={};editing=null;selectedOrderId=null;detailTab='company';go('dashboard');lastSync=Date.now();
 }
 async function logout(){if(!ZYDrafts.confirmAll())return;try{await api('/api/logout',{method:'POST',body:{}});loginScreen('已退出登录')}catch(e){toast(e.message)}}
 async function accountDialog(){
@@ -45,7 +45,7 @@ async function disableUser(id){if(!confirm('停用此账号并立即撤销其登
 async function performSync(){
  if(!sessionUser||saving||document.hidden||$('#modal').open||!['dashboard','orders','workerRecords'].includes(view))return;
  const syncView=view,syncUser=sessionUser.id;
- try{const data=await api('/api/orders');if(saving||view!==syncView||sessionUser?.id!==syncUser||$('#modal').open)return;const changed=data.revision!==revision;orders=data.orders;revision=data.revision;if(changed&&['dashboard','orders'].includes(view))render();if(view==='workerRecords')await recordsView();lastSync=Date.now();const maintenance=await api('/api/maintenance');if($('#syncStatus'))$('#syncStatus').textContent=maintenance.readOnly?'维护中 · 只读，已暂停写入':'团队资料已同步'}catch(e){if($('#syncStatus'))$('#syncStatus').textContent='连接中断，正在重试；请勿关闭未保存表单'}
+ try{const data=await api('/api/orders');if(saving||view!==syncView||sessionUser?.id!==syncUser||$('#modal').open)return;const changed=data.revision!==revision;orders=data.orders;revision=data.revision;updateReviewCount();if(changed&&['dashboard','orders'].includes(view))render();if(view==='workerRecords')await recordsView();lastSync=Date.now();const maintenance=await api('/api/maintenance');if($('#syncStatus'))$('#syncStatus').textContent=maintenance.readOnly?'维护中 · 只读，已暂停写入':'团队资料已同步'}catch(e){if($('#syncStatus'))$('#syncStatus').textContent='连接中断，正在重试；请勿关闭未保存表单'}
 }
 async function migrateLocal(){
  let localOrders=[];try{localOrders=JSON.parse(localStorage.getItem(key)||'[]')}catch{return toast('旧订单格式异常，未上传')}
