@@ -1,3 +1,9 @@
+## Editable company fee notes
+
+- Generated fee notes are now editable in single, edit and batch forms. Explicit edits persist as a separate scalar customFeeNote and are used verbatim in company publication, including after reopening or changing salary.
+- Explicit w/万 amount edits synchronize the existing internal company amount without changing its calculation formula. The separate amount dialog updates the amount inside a custom note; automatic notes retain existing behavior.
+- Dirty-form snapshots include manual note edits. Existing notes remain generated until edited; no migration or hosted backend change is required.
+
 ## Experience-first worker-to-job matching
 
 - Implemented the November 9 replacement task: hard gender/age/related-history gates; best plus quarter-second experience with duration/recency/Hong Kong factors; equal observed-condition average; 10/7/5 preference bonuses; 70/30 totals and same-category high-grade requirement. Languages do not cap grades. Missing history requests completion.

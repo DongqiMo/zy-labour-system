@@ -57,7 +57,7 @@ window.saveBatch=async function(){
   const candidate=ZYOrderParser.sanitizeCompany(o),issues=ZYOrderParser.validateCompany(candidate);if(issues.length)return fail(issues[0]);
   if(used.has(ZYOrderParser.baseCode(candidate.code)))return fail('公司单号已存在，请修改');used.add(ZYOrderParser.baseCode(candidate.code));
  }
- const added=batch.map(o=>ZYOrderParser.sanitizeCompany({...Object.fromEntries(Object.keys(orderFields).map(k=>[k,String(o[k]??'').trim()])),raw:ZYOrderParser.sanitizeRaw(o.raw),sourcePrefix:o.sourcePrefix||'',...recognitionMetadata(o,o),id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(o.price)})).map(record=>({...record,salary:ZYOrderParser.formatCompanySalary(record.salary),price:priceN(record.price)>0?priceFmt(record.price):''}));
+ const added=batch.map(o=>ZYOrderParser.sanitizeCompany({...Object.fromEntries(Object.keys(orderFields).map(k=>[k,String(o[k]??'').trim()])),customFeeNote:o.customFeeNote??null,raw:ZYOrderParser.sanitizeRaw(o.raw),sourcePrefix:o.sourcePrefix||'',...recognitionMetadata(o,o),id:crypto.randomUUID(),createdAt:new Date().toISOString(),status:status(o.price)})).map(record=>({...record,salary:ZYOrderParser.formatCompanySalary(record.salary),price:priceN(record.price)>0?priceFmt(record.price):''}));
  const old=orders;orders=added.concat(orders);if(!await persist()){orders=old;return}
  batch=[];batchInput='';activeBatch=0;go('orders',{preserveOrders:true});showSavedOrder(added[0].id);toast('批量劳务单已保存');
 };

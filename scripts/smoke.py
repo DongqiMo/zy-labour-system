@@ -139,8 +139,8 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('batch.every(o=>!("firstRecognition" in o))')
             assert admin.evaluate("batch.every(o=>!o.raw.includes('AT-'))")
             admin.evaluate('saveBatch()');assert '请选择' in admin.locator('.toast').inner_text() or '选择招聘性别' in admin.locator('.toast').inner_text()
-            assert admin.locator('#batch-fields input,#batch-fields textarea:not([readonly]),#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length')
-            assert admin.locator('#batch-fields [id]:not([readonly])').evaluate_all('(elements)=>elements.map(e=>e.id.slice(4)).sort()')==admin.evaluate('Object.keys(orderFields).sort()')
+            assert admin.locator('#batch-fields input,#batch-fields textarea:not([readonly]),#batch-fields select').count()==admin.evaluate('Object.keys(orderFields).length+1')
+            assert admin.locator('#batch-fields [id]:not([readonly]):not([id$="-fee-note"])').evaluate_all('(elements)=>elements.map(e=>e.id.slice(4)).sort()')==admin.evaluate('Object.keys(orderFields).sort()')
             admin.locator('#b-0-gender').select_option('女')
             admin.locator('#b-0-requirements').fill('批量备注：工作要求')
             admin.locator('#b-0-language').fill('粤语、英语')
@@ -163,6 +163,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.locator('#batch-source').bounding_box()['x']<admin.locator('#batch-review').bounding_box()['x']
             admin.evaluate('selectBatchItem(1)')
             admin.locator('#b-1-gender').select_option('男');set_amount(admin,'#b-1-price','4.6w')
+            admin.locator('#b-1-fee-note').fill('劳务，服务费管理费：4.6w全包\n批量人工备注')
             admin.evaluate('selectBatchItem(0)')
             assert admin.locator('#b-0-requirements').input_value()=='批量备注：工作要求'
             assert admin.locator('#b-0-language').input_value()=='粤语、英语'
@@ -175,6 +176,7 @@ with tempfile.TemporaryDirectory() as tmp:
             assert admin.evaluate('orders[0].requirements')=='批量备注：工作要求'
             assert admin.evaluate('orders[0].interview')=='现场面试'
             assert admin.evaluate('orders[1].price')=='4.6w'
+            assert admin.evaluate('orders[1].customFeeNote')=='劳务，服务费管理费：4.6w全包\n批量人工备注'
             assert admin.evaluate('orders.slice(0,2).every(o=>!("firstRecognition" in o))')
             assert admin.evaluate("orders.every(o=>['男','女','男女不限'].includes(o.gender))")
             # Reload repairs only known legacy parser artifacts and V-date codes, preserving raw.
@@ -346,15 +348,25 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.locator('#o-salary').fill('HKD29999')
             set_amount(admin,'#o-price','4w')
             assert admin.locator('#o-fee-note').input_value()==admin.evaluate("feeNote('4w')")
-            assert admin.locator('#o-fee-note').get_attribute('readonly') is not None
+            assert admin.locator('#o-fee-note').get_attribute('readonly') is None
+            custom_note='劳务，服务费管理费：4.5w全包\n人工补充：费用以确认内容为准'
+            admin.locator('#o-fee-note').fill(custom_note)
+            assert admin.locator('#o-price').input_value()=='4.5w'
+            assert admin.evaluate('ZYDrafts.orderDirty()')
+            admin.locator('#o-salary').fill('HKD29998')
+            assert admin.locator('#o-fee-note').input_value()==custom_note
             assert admin.locator('#o-price').is_hidden()
             assert admin.locator('label').filter(has_text='备注金额（').count()==0
             admin.evaluate('saveOrder()')
             admin.wait_for_selector('.order-row',state='attached')
             archive_record=admin.evaluate("api('/api/orders').then(r=>r.orders.find(o=>o.title==='人工核对职位'))")
+            assert archive_record['customFeeNote']==custom_note
+            assert custom_note in admin.evaluate('o=>publish({...o,...ZYOrderParser.humanReviewMetadata(o,"synthetic")})',archive_record)
             assert 'firstRecognition' not in archive_record
             assert admin.evaluate("o=>publish(o)",archive_record).find('firstRecognition')==-1
-            admin.evaluate("id=>editOrder(id)",archive_record['id']);admin.evaluate('reparseExistingOrder()')
+            admin.evaluate("id=>editOrder(id)",archive_record['id'])
+            assert admin.locator('#o-fee-note').input_value()==custom_note
+            admin.evaluate('reparseExistingOrder()')
             assert admin.evaluate('!("firstRecognition" in singleRecognitionMeta)')
             admin.locator('#o-title').fill('人工核对职位二')
             admin.evaluate('saveOrder()');admin.wait_for_selector('.order-row',state='attached')
