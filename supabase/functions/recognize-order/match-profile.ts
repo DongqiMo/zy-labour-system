@@ -16,3 +16,11 @@ export function validateProfile(raw:any,input:any,kind:string){
  for(const key of ['height','weight','education','health','experience']){const r=req[key];requirements[key]=null;if(!evidence(r))continue;if(['height','weight'].includes(key)&&typeof r.value==='number'&&r.value>0&&r.evidence.includes(String(r.value))&&['minimum','maximum'].includes(r.operator))requirements[key]={value:r.value,operator:r.operator,evidence:r.evidence};if(key==='education'&&Number.isInteger(r.value)&&r.value>=1&&r.value<=5)requirements[key]={value:r.value,evidence:r.evidence};if(key==='health'&&r.value===true)requirements[key]={value:true,evidence:r.evidence};if(key==='experience'&&categoryCodes.includes(r.category))requirements[key]={category:r.category,evidence:r.evidence};}
  return {category:p.category,evidence:p.evidence,requirements};
 }
+
+// Gemini requires explicit nonempty OBJECT properties, including optional metadata.
+export function profileSchema(kind:string){
+ const text={type:'STRING'},number={type:'NUMBER'},obj=(properties:any)=>({type:'OBJECT',properties}),array=(items:any)=>({type:'ARRAY',items}),row=obj({index:{type:'INTEGER'},category:{type:'STRING',enum:categoryCodes},evidence:text});
+ if(kind==='worker')return obj({intents:array(row),history:array(row)});
+ const physical=obj({value:number,operator:{type:'STRING',enum:['minimum','maximum']},evidence:text});
+ return obj({category:{type:'STRING',enum:categoryCodes},evidence:text,requirements:obj({language:array(obj({lang:{type:'STRING',enum:['cantonese','mandarin','english']},level:{type:'INTEGER'},evidence:text})),certificate:array(obj({value:text,evidence:text})),height:{...physical,nullable:true},weight:{...physical,nullable:true},education:{...obj({value:{type:'INTEGER'},evidence:text}),nullable:true},health:{...obj({value:{type:'BOOLEAN'},evidence:text}),nullable:true},experience:{...obj({category:{type:'STRING',enum:categoryCodes},evidence:text}),nullable:true}})});
+}

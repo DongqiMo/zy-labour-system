@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {matchInput,validateProfile,categoryCodes} from '../supabase/functions/recognize-order/match-profile.ts';
+import {matchInput,validateProfile,categoryCodes,profileSchema} from '../supabase/functions/recognize-order/match-profile.ts';
 let handler:any,calls:any[]=[],quota=true;
 const env:any={SUPABASE_URL:'https://synthetic.example',SUPABASE_ANON_KEY:'public',ZY_ALLOWED_ORIGINS:'https://site.example',AI_PROVIDER:'deepseek',DEEPSEEK_ENABLED:'true',DEEPSEEK_MODEL:'deepseek-chat',DEEPSEEK_API_KEY:'synthetic-server-secret'};
 (globalThis as any).Deno={env:{get:(k:string)=>env[k]},serve:(h:any)=>handler=h};
@@ -14,3 +14,6 @@ assert.equal(validateProfile({matchProfile:{category:'cleaning',evidence:'编造
 assert.equal(validateProfile({matchProfile:{category:'cleaning',evidence:'清洁',requirements:{height:{value:190,operator:'minimum',evidence:'身高155'}}}},{title:'清洁',requirements:'身高155'},'order')?.requirements.height,null);
 assert(categoryCodes.includes('hotel_housekeeping'));
 console.log('PASS: mocked classification endpoint, server allowlist, evidence/types, auth quota reservation and no secret exposure');
+
+function checkSchema(s:any){if(s.type==='OBJECT')assert(Object.keys(s.properties||{}).length);for(const p of Object.values(s.properties||{}))checkSchema(p);if(s.items)checkSchema(s.items)}
+checkSchema(profileSchema('worker'));checkSchema(profileSchema('order'));
