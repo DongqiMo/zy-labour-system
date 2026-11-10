@@ -3,14 +3,14 @@ let selectedOrderId=null,detailTab='company',detailScroll=0,orderListReturn=null
 let calendarExpanded=false;
 const expandedOrderDates=new Set();
 const jsValue=value=>esc(JSON.stringify(value));
-const navSymbols={orders:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',workers:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',workerRecords:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M5 17c0-4 8-4 8 0M15 8h3M15 12h3"/>'};
+const navSymbols={orders:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',workers:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',match:'<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5M7 10l2 2 4-4"/>',workerRecords:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M5 17c0-4 8-4 8 0M15 8h3M15 12h3"/>'};
 function navigation(){
  const nav=$('#nav');if(!nav)return;
- nav.innerHTML=[['劳务单',['orders']],['劳工信息',['workers','workerRecords']]].map(([label,keys])=>`<section class="nav-group"><h2 class="nav-group-title">${label}</h2><div class="nav-group-items">${keys.map(k=>`<button class="${k===view?'active':''}" ${k===view?'aria-current="page"':''} onclick="go('${k}',{preserveOrders:true})"><svg viewBox="0 0 24 24" aria-hidden="true">${navSymbols[k]}</svg><span>${k==='workers'?'劳工登记':names[k]}</span>${k==='orders'?'<b id="nav-review-count" hidden></b>':''}</button>`).join('')}</div></section>`).join('');updateReviewCount();
+ nav.innerHTML=[['劳务单',['orders']],['劳工信息',['workers','workerRecords','match']]].map(([label,keys])=>`<section class="nav-group"><h2 class="nav-group-title">${label}</h2><div class="nav-group-items">${keys.map(k=>`<button class="${k===view?'active':''} ${k==='match'?'match-nav':''}" ${k===view?'aria-current="page"':''} onclick="go('${k}',{preserveOrders:true})"><svg viewBox="0 0 24 24" aria-hidden="true">${navSymbols[k]}</svg><span>${k==='workers'?'劳工登记':names[k]}</span>${k==='orders'?'<b id="nav-review-count" hidden></b>':''}</button>`).join('')}</div></section>`).join('');updateReviewCount();
 }
 function updateReviewCount(){const badge=$('#nav-review-count');if(!badge)return;const n=orders.filter(o=>orderState(o)==='review').length;badge.hidden=!n;badge.textContent=n;badge.setAttribute('aria-label',(window.ZYI18n?.translate('需核对')||'需核对')+': '+n)}
 function go(v,options={}){
- closeOrderMenu();hideDetailOverlay();
+ if(v!=='match')window.ZYMatchUI?.leave();closeOrderMenu();hideDetailOverlay();
  if(v==='dashboard'||v==='orders'){
   if(!options.preserveOrders){filters.orders.range=v==='dashboard'?'today':'all';filters.orders.date=''}
   view='orders';calendarExpanded=false;
@@ -22,7 +22,7 @@ function teamMenu(){
 }
 function render(){
  document.body.dataset.view=view;
- if(view==='new')return newView();if(view==='workers')return workerView();if(view==='workerRecords')return recordsView();
+ if(view==='match')return matchView();if(view==='new')return newView();if(view==='workers')return workerView();if(view==='workerRecords')return recordsView();
  if(!$('#order-workspace')){
   $('#content').innerHTML=`<div id="order-workspace"><section class="order-list-pane" aria-label="劳务单列表"><div class="order-tools"><div class="order-heading"><h1>劳务单</h1><div class="business-clock"><time id="business-date" data-user-content></time> <span>北京时间</span></div></div><input id="order-search" type="search" placeholder="搜索职位、单号、雇主、薪资" aria-label="搜索职位、单号、雇主、薪资" value="${esc(filters.orders.q)}" oninput="queueOrderSearch(this.value)"><div class="date-segments" role="group" aria-label="日期范围"><button data-range="today" onclick="setOrderRange('today')">今天</button><button class="range-week" data-range="week" onclick="setOrderRange('week')">本周</button><button data-range="all" onclick="setOrderRange('all')">全部</button><button class="range-date" data-range="date" onclick="toggleOrderCalendar()">选日期</button></div><div id="state-chips" aria-label="状态筛选"></div><div id="order-calendar"></div></div><div class="order-table-scroll"><div class="order-table"><div class="order-grid order-table-head" aria-hidden="true"><span>单号</span><span>职位 · 雇主</span><span>月薪</span><span>性别</span><span>年龄</span><span>状态</span><span>操作</span></div><div id="results"></div></div></div><p id="list-count" class="list-count"></p></section><section id="order-detail" class="order-detail" aria-label="劳务单详情"></section></div><button class="new-order-fab" aria-label="整理新劳务单" onclick="editing=null;go('new')">＋</button>`;
  }

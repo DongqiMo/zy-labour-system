@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "start": "python3 server/app.py serve --dev",
-    "check": "node scripts/check.mjs && node --check dist/business-time.js && node --check dist/shared.js && node --check dist/order-list.js && node --check dist/workflow-guards.js && node --check dist/supabase-adapter.js && node --check dist/order-parser.js && node --check dist/batch-editor.js && node --check dist/i18n.js && node --check dist/order-recognition.js && node --check dist/worker-registration.js && node --check dist/recognition-archive.js && node --check dist/ai-recognition.js",
+    "check": "node scripts/check.mjs && node --check dist/job-categories.js && node --check dist/matching.js && node --check dist/match-view.js && node --check dist/business-time.js && node --check dist/shared.js && node --check dist/order-list.js && node --check dist/workflow-guards.js && node --check dist/supabase-adapter.js && node --check dist/order-parser.js && node --check dist/batch-editor.js && node --check dist/i18n.js && node --check dist/order-recognition.js && node --check dist/worker-registration.js && node --check dist/recognition-archive.js && node --check dist/ai-recognition.js",
     "test": "python3 -m unittest discover -s tests -v",
     "start:static": "python3 -m http.server 8080 --directory dist",
     "test:postgres": "node tests/postgres.mjs",
-    "test:transport": "node tests/supabase-adapter.mjs && node --experimental-strip-types tests/edge-test.ts && node --experimental-strip-types tests/gemini-edge.ts && node --experimental-strip-types tests/deepseek-edge.ts",
-    "test:parser": "node tests/business-time.mjs && node tests/order-parser.mjs && node tests/recognition.mjs && node tests/recognition-mechanism.mjs && node tests/ai-recognition.mjs"
+    "test:transport": "node tests/supabase-adapter.mjs && node --experimental-strip-types tests/edge-test.ts && node --experimental-strip-types tests/gemini-edge.ts && node --experimental-strip-types tests/deepseek-edge.ts && node --experimental-strip-types tests/matching-edge.ts",
+    "test:parser": "node tests/matching.mjs && node tests/matching-ai.mjs && node tests/business-time.mjs && node tests/order-parser.mjs && node tests/recognition.mjs && node tests/recognition-mechanism.mjs && node tests/ai-recognition.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14"

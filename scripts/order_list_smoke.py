@@ -124,7 +124,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
                 assert page.locator('.mobile-row-meta').evaluate_all("items=>items.every(e=>getComputedStyle(e).whiteSpace==='nowrap')")
                 assert page.locator('nav').evaluate('(e)=>e.getBoundingClientRect().height')==68
-                assert page.locator('nav button').count()==3
+                assert page.locator('nav button:visible').count()==3
                 assert page.locator('.order-tools button:visible,.order-open:visible,.row-action:visible,nav button:visible').evaluate_all('items=>items.every(e=>e.getBoundingClientRect().height>=44)')
                 assert page.locator('.new-order-fab').evaluate('(e)=>e.getBoundingClientRect().bottom')<=844-68-16
                 page.locator('[data-order-id=ui-ready] .order-open').click()

@@ -71,4 +71,14 @@ assert.deepEqual(afterRetirement.orders,beforeRetirement.orders.map(({firstRecog
 await login(owner);const fresh=await rpc('zy_orders_get');
 await rpc('zy_orders_save',fresh.orders.map(o=>({...o,firstRecognition:'old-client-reintroduced'})),fresh.revision);
 assert((await rpc('zy_orders_get')).orders.every(o=>!Object.hasOwn(o,'firstRecognition')));
+await db.exec('reset role');
+await db.exec(readFileSync(new URL('../supabase/migrations/202611100001_match_profile.sql',import.meta.url),'utf8'));
+await db.exec(`select zy_private.validate_match_profile('{"version":1,"by":"rules","sourceHash":"synthetic"}'::jsonb);`);
+await rejects(()=>db.exec(`select zy_private.validate_match_profile('{"version":2}'::jsonb)`),/岗位归类字段无效/);
+const classification={version:1,sourceHash:'synthetic',by:'rules'};
+await login(owner);const current=await rpc('zy_orders_get');
+await rpc('zy_orders_save',current.orders.map(o=>({...o,matchProfile:classification,firstRecognition:'must-strip'})),current.revision);
+assert((await rpc('zy_orders_get')).orders.every(o=>o.matchProfile.version===1&&!Object.hasOwn(o,'firstRecognition')));
+const savedWorkers=(await rpc('zy_workers_get')).workers;if(savedWorkers.length){await rpc('zy_worker_save',{...savedWorkers[0],matchProfile:classification});assert.equal((await rpc('zy_workers_get')).workers.find(w=>w.id===savedWorkers[0].id).matchProfile.version,1)}
+await login(outsider);await rejects(()=>rpc('zy_orders_get'),/账号未获/);
 await db.close();console.log('PASS: PostgreSQL SQL, anonymous/outsider/staff/admin permissions, sharing, edit conflicts, immutable raw, snapshot export, atomic empty-target restore, PostgreSQL→SQLite→PostgreSQL images/PDF/history roundtrip, read-only migration mode, disabled membership');

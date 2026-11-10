@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),M=require('../dist/matching.js'),today='2026-11-09';
+const worker={name:'合成李秀兰',gender:'女',birthDate:'1984-06-12',desiredJob1:'清洁',desiredJob2:'酒店客房',desiredJob3:'厨房帮工',cantonese:'流利',mandarin:'良好',english:'略懂',desiredSalary:'HKD14000',certificates:'健康证',workHistory:[{period:'2019.03–2023.08',employer:'香港某酒店',position:'客房清洁员'},{period:'2015.06–2019.02',employer:'江门某酒楼',position:'厨房帮工'},{period:'2010.09–2015.05',employer:'江门某工厂',position:'包装工'}]};
+for(const raw of ['40-50岁','40至50岁','40~50'])assert.deepEqual([M.parseAgeRange(raw).min,M.parseAgeRange(raw).max],[40,50]);
+for(const raw of ['50岁内','50岁以下','50岁以内'])assert.equal(M.parseAgeRange(raw).max,50);
+assert.equal(M.parseAgeRange('18岁以上').min,18);assert(M.parseAgeRange('不限').unlimited);assert(M.parseAgeRange('年龄面议').unknown);
+assert.equal(M.workerAge(worker,'2026-06-11'),41);assert.equal(M.workerAge(worker,'2026-06-12'),42);assert.equal(M.workerAge({...worker,age:'25'},today),42);
+for(const raw of ['2019.03–2023.08','2019.3-2023.8','2019/03-2023/08','2019年3月至2023年8月'])assert.equal(M.parsePeriod(raw,today).months,53);
+assert.equal(M.parsePeriod('2021.06-至今',today).months,65);assert.equal(M.parsePeriod('2019-2023',today).months,59);assert(M.parsePeriod('2019-2023',today).approximate);
+assert.equal(M.parsePeriod('很久以前',today).months,12);assert.equal(M.parsePeriod('很久以前',today).recency,.7);assert(M.parsePeriod('很久以前',today).unknown);
+for(const [months,factor]of [[3,.4],[6,.5],[12,.7],[24,.9],[36,1],[48,1],[9,.6],[18,.8]])assert(Math.abs(M.durationFactor(months)-factor)<1e-9);
+for(const [months,factor]of [[24,1],[72,.7],[144,.4],[0,1]])assert.equal(M.recencyFactor(months),factor);
+assert.deepEqual(M.jobCategory('客房清洁员'),['cleaning','hotel_housekeeping']);assert.deepEqual(M.jobCategory('帮厨'),['kitchen_helper']);
+assert.equal(M.relevance({position:'客房清洁员'},{title:'清洁员'}),1);assert.equal(M.relevance({position:'客房服务员'},{title:'清洁员'}),.5);assert.equal(M.relevance({position:'电脑操作员',duties:'清点文件'},{title:'电器销售',workContent:'清点货物'}),0);
+assert.equal(M.parseLanguageRequirement('普通话、简单英语').groups.length,2);assert.equal(M.parseLanguageRequirement('粤语或普通话').groups.length,1);assert.equal(M.parseLanguageRequirement('粤语、普通话流利').groups[0][0].level,4);
+assert.equal(M.scoreLanguage({mandarin:'流利'},{language:'粤语或普通话'}).got,100);assert.equal(M.scoreLanguage({cantonese:'流利',english:'略懂'},{language:'粤语流利、简单英语'}).got,80);assert.equal(M.scoreLanguage({},{language:'粤语流利'}).got,null);
+for(const [text,amount,currency]of [['HKD13500',13500,'HKD'],['HKD15930+',15930,'HKD'],['MOP15000',15000,'MOP'],['1.4万',14000,'HKD'],['1.4w',14000,'HKD']])assert.deepEqual(M.parseSalary(text),{amount,currency});assert.equal(M.parseSalary('面议'),null);
+assert.equal(M.scoreSalary({desiredSalary:'HKD15400'},{salary:'HKD14000'}).ratio,.6);assert.equal(M.scoreSalary({desiredSalary:'HKD15401'},{salary:'HKD14000'}).ratio,0);
+assert.equal(M.scoreConditions(worker,{title:'清洁员'}).applicable,false);assert.equal(M.scoreConditions(worker,{title:'清洁员',salary:'MOP15000'}).applicable,false);
+const missing=M.scoreConditions({}, {title:'清洁员',requirements:'身高155cm以上，初中以上，身体健康，健康证'});assert.equal(missing.score,null);assert(missing.missing.includes('身高'));assert(missing.missing.includes('专业证书'));
+assert.equal(M.scoreConditions({height:'160',education:'本科',health:'健康良好',certificates:'健康证'},{requirements:'身高155cm以上，初中以上，身体健康，健康证'}).score,100);
+assert.equal(M.scoreOther({health:'不健康'},{requirements:'身体健康'})[0].ratio,0);
+for(const [score,level]of [[74,'mid'],[75,'high'],[49,'low'],[50,'mid']])assert.equal(M.levelForScore(score,true),level);assert.equal(M.levelForScore(90,false),'mid');
+const rows=[['酒店客房服务员','女','25-45岁','粤语','HKD17500','high',100],['清洁员','女','30-55岁','粤语流利、简单英语','HKD14500','high',100],['厨房帮工','男女不限','30-50岁','粤语','HKD15000','high',84],['厨房帮工','男女不限','30-50岁','普通话流利','HKD15000','high',78],['仓库理货员','男女不限','20-50岁','','MOP15000','low',20],['护理员','女','30-50岁','','','excluded'],['点心厨师','男','50岁内','','HKD18920','excluded'],['电脑操作员','女','35岁以下','','HKD14000','excluded']];
+for(const [title,gender,age,language,salary,level,score]of rows){const r=M.matchWorkerToOrder(worker,{id:title,title,gender,age,language,salary},{today});if(level==='excluded')assert(r.excluded,title);else{assert.equal(r.level,level,title);assert.equal(r.score,score,title)}console.log(title+': '+(r.excluded?r.reasons.join('；'):r.score+' '+r.level))}
+assert(M.matchWorkerToOrder(worker,{title:'清洁员',age:'41岁以下'},{today}).excluded);
+const intentOnly=M.matchWorkerToOrder({...worker,desiredJob1:'护理',workHistory:[{position:'餐厅服务员',period:'2019-2023'}]},{title:'护理员'},{today});assert(intentOnly.excluded);assert(intentOnly.reasons.includes('意向相符，但没有相关工作经历'));
+assert(M.matchWorkerToOrder({}, {title:'清洁员'},{today}).needsHistory);
+assert.equal(M.scoreIntent(worker,{title:'厨房帮工'}).got,5);assert.equal(M.scoreIntent({desiredJob1:'厨师'},{title:'厨房帮工'}).got,5);assert.equal(M.scoreIntent({}, {title:'清洁员'}).got,0);
+const twice=M.scoreExperience({...worker,workHistory:[{position:'清洁员',period:'2015-2020'},{position:'清洁员',period:'2010-2015'}]},{title:'清洁员'},today);assert.equal(twice.got,80);assert.deepEqual(twice.historyIndexes,[0,1]);
+const hk={workedHongKong:'是',hkEmployer:'香港某酒店',workHistory:[]};assert.equal(M.histories(hk).length,1);assert.equal(M.histories({...hk,workHistory:[{employer:'香港某酒店'}]}).length,1);assert(M.scoreExperience(hk,{title:'酒店客房服务员'},today).hasRelated);
+const order={title:'清洁员',workContent:'打扫'},profile={version:1,sourceHash:M.sourceHash(order,'order'),by:'ai',category:'cleaning',evidence:'清洁员',requirements:{}};
+assert(M.profileFor({...order,matchProfile:profile}).valid);assert(!M.profileFor({...order,matchProfile:{...profile,category:'invalid'}}).valid);assert(!M.profileFor({...order,matchProfile:{...profile,evidence:'编造'}}).valid);assert(!M.profileFor({...order,title:'厨师',matchProfile:profile}).valid);
+const aiWorker={...worker,matchProfile:{version:1,sourceHash:M.sourceHash(worker,'worker'),by:'ai',intents:[],history:[{index:0,category:'cleaning',evidence:'客房清洁员'}]}};assert.equal(M.scoreExperience(aiWorker,order,today).by,'ai');assert.equal(M.profileFor({...aiWorker,matchProfile:{...aiWorker.matchProfile,history:[{index:0,category:'cleaning',evidence:'invented'}]}},'worker').by,'rules');
+const before=JSON.stringify(worker),base=M.matchWorkerToOrder(worker,order,{today});assert.equal(M.matchWorkerToOrder({...worker,name:'other',phone:'private',permit:'否',idNumber:'private'},order,{today}).score,base.score);assert.equal(JSON.stringify(worker),before);
+const candidates=[{id:'recent',title:'清洁员',createdAt:'2026-11-09T01:00:00Z'},{id:'old',title:'清洁员',createdAt:'2026-10-26T01:00:00Z'}];assert.deepEqual(M.matchWorker(worker,candidates,{today}).map(r=>r.orderId),['recent']);assert.equal(M.matchWorker(worker,candidates,{today,days:30}).length,2);
+console.log('PASS: experience-first matching, hard gates, conditions, no language cap, AI evidence/hash fallback and privacy');
+
+assert.equal(M.scoreSalary({desiredSalary:'CAD14000'},{salary:'CAD15000'}).ratio,1);
+
+assert.equal(M.scoreConditions({certificates:'护工上岗证'},{requirements:'须持护工上岗证'}).score,100);

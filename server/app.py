@@ -96,6 +96,13 @@ def validate_id(value):
         raise APIError(400, '记录ID格式无效')
 
 
+def validate_match_profile(value):
+    if value is None:
+        return
+    if not isinstance(value, dict) or value.get('version') != 1 or value.get('by') not in ('ai', 'rules') or not isinstance(value.get('sourceHash'), str) or len(json.dumps(value)) > 16000:
+        raise APIError(400, '岗位归类字段无效')
+
+
 def validate_orders(orders):
     if not isinstance(orders, list) or len(orders) > 10000:
         raise APIError(400, '订单格式无效或超过10000份')
@@ -108,6 +115,9 @@ def validate_orders(orders):
             if not isinstance(o.get(field), str) or not o[field].strip():
                 raise APIError(400, '公司单号、职位、原单及创建时间必填')
         for field, value in o.items():
+            if field == 'matchProfile':
+                validate_match_profile(value)
+                continue
             if field in ('__proto__', 'constructor', 'prototype') or not isinstance(value, (str, int, float, bool, type(None))):
                 raise APIError(400, '订单字段格式无效')
         if o.get('status') not in ('draft', 'ready'):
@@ -128,7 +138,9 @@ def validate_worker(w):
     for field, value in w.items():
         if field in ('__proto__', 'constructor', 'prototype'):
             raise APIError(400, '资料字段无效')
-        if field in ('educationHistory', 'workHistory'):
+        if field == 'matchProfile':
+            validate_match_profile(value)
+        elif field in ('educationHistory', 'workHistory'):
             limit = 2 if field == 'educationHistory' else 4
             if not isinstance(value, list) or len(value) > limit or any(not isinstance(h, dict) or any(not isinstance(v, str) for v in h.values()) for h in value):
                 raise APIError(400, '经历格式或条数无效')
@@ -229,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
             elif method == 'GET':
                 if path=='/config.js':
                     return self.reply(200,b"window.ZY_CONFIG={provider:'sqlite'};",content_type='text/javascript; charset=utf-8')
-                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/worker-registration.js':'worker-registration.js', '/workspace-theme.css':'workspace-theme.css', '/worker-registration.css':'worker-registration.css', '/worker-registration-template.png':'worker-registration-template.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/recognition-archive.js':'recognition-archive.js', '/ai-recognition.js':'ai-recognition.js', '/business-time.js':'business-time.js','/order-list.js':'order-list.js','/workflow-guards.js':'workflow-guards.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
+                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/worker-registration.js':'worker-registration.js', '/workspace-theme.css':'workspace-theme.css', '/worker-registration.css':'worker-registration.css', '/worker-registration-template.png':'worker-registration-template.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/recognition-archive.js':'recognition-archive.js', '/ai-recognition.js':'ai-recognition.js', '/job-categories.js':'job-categories.js','/matching.js':'matching.js','/match-view.js':'match-view.js','/business-time.js':'business-time.js','/order-list.js':'order-list.js','/workflow-guards.js':'workflow-guards.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
                 if path not in files:
                     raise APIError(404, '找不到页面')
                 target = ROOT / 'dist' / files[path]

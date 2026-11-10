@@ -29,7 +29,7 @@
  const renderOrder=root.newView;
  root.newView=function(...args){const result=renderOrder(...args);baselineElement=document.querySelector('#raw');baseline=orderSnapshot();return result};
  const go=root.go;
- root.go=function(...args){if(!allowSingle())return false;return pass(()=>go(...args))};
+ root.go=function(...args){if(!allowSingle())return false;if(args[0]==='match'&&view==='workers'&&!saving&&workerDirty()&&!confirm('登记资料尚未保存，仍要进入岗位匹配？'))return false;return pass(()=>go(...args))};
  const leave=root.leaveOrderEditor;
  root.leaveOrderEditor=function(...args){if(!allowSingle())return false;return pass(()=>leave(...args))};
  const edit=root.editOrder;

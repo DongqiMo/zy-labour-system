@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),M=require('../dist/matching.js');
+const record={name:'PRIVATE-NAME',phone:'PRIVATE-PHONE',idNumber:'PRIVATE-ID',currentAddress:'PRIVATE-ADDRESS',photo:'PRIVATE-PHOTO',workHistory:[{position:'保洁员',duties:'清理室内',employer:'PRIVATE-EMPLOYER'}],desiredJob1:'清洁',certificates:'健康证'};
+let requests=[],warnings=[],mode='ok';
+const api=async(path,{body}={})=>{requests.push({path,body});if(path==='/api/recognition-status')return {enabled:true,classification:true};if(mode==='quota')throw Error('quota');if(mode==='timeout')throw Error('timeout');return {matchProfile:{intents:[{index:0,category:'cleaning',evidence:mode==='evidence'?'编造':'清洁'}],history:[{index:0,category:mode==='category'?'invented':'cleaning',evidence:'保洁员'}]}}};
+const context=vm.createContext({ZY_CONFIG:{provider:'supabase'},ZYMatching:M,api,toast:t=>warnings.push(t),setTimeout,clearTimeout});vm.runInContext(fs.readFileSync('dist/ai-recognition.js','utf8'),context);
+const profile=await context.ZYAI.analyzeMatch(record,'worker');assert.equal(profile.by,'ai');assert(M.profileFor({...record,matchProfile:profile},'worker').valid);
+for(const r of requests)for(const secret of ['PRIVATE-NAME','PRIVATE-PHONE','PRIVATE-ID','PRIVATE-ADDRESS','PRIVATE-PHOTO','PRIVATE-EMPLOYER'])assert(!JSON.stringify(r).includes(secret));
+const count=requests.length;await context.ZYAI.analyzeMatch({...record,matchProfile:profile},'worker');assert.equal(requests.length,count);
+for(const value of ['evidence','category','quota','timeout']){mode=value;assert.equal(await context.ZYAI.analyzeMatch(record,'worker'),null)}assert.equal(warnings.length,1);
+assert.equal(record.matchProfile,undefined);
+console.log('PASS: mocked AI allowlisted transport, cache, invalid evidence/category, quota/timeout fallback, no business mutation');

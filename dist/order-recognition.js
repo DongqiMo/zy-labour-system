@@ -90,7 +90,7 @@ function recognitionMetadata(order,meta){
  if(!meta)return {};
  let previous={};try{previous=JSON.parse(meta.parsedSnapshot||'{}')}catch{}
  const manual=Object.keys(previous).filter(key=>String(order[key]??'')!==String((key==='salary'?ZYOrderParser.formatCompanySalary(previous[key]):previous[key])??''));
- return {aiProvider:meta.aiProvider||'',aiModel:meta.aiModel||'',aiEvidence:meta.aiEvidence||'',aiWarnings:meta.aiWarnings||'',boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
+ return {matchProfile:meta.matchProfile||null,aiProvider:meta.aiProvider||'',aiModel:meta.aiModel||'',aiEvidence:meta.aiEvidence||'',aiWarnings:meta.aiWarnings||'',boundaryMode:meta.boundaryMode||'',sourcePrefix:order.sourcePrefix||meta.sourcePrefix||'',parserVersion:meta.parserVersion||'',parsedSnapshot:meta.parsedSnapshot||'',manualFields:JSON.stringify(manual),recognitionAudit:meta.recognitionAudit||'',reviewConfirmation:meta.reviewConfirmation||'',humanReviewedSource:meta.humanReviewedSource||'',humanReviewedAt:meta.humanReviewedAt||'',humanReviewedBy:meta.humanReviewedBy||''};
 }
 window.saveOrder=async function(){
  const data=read(orderFields),input=$('#raw').value.trim();

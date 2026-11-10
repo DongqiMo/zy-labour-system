@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {matchInput,validateProfile,categoryCodes} from '../supabase/functions/recognize-order/match-profile.ts';
+let handler:any,calls:any[]=[],quota=true;
+const env:any={SUPABASE_URL:'https://synthetic.example',SUPABASE_ANON_KEY:'public',ZY_ALLOWED_ORIGINS:'https://site.example',AI_PROVIDER:'deepseek',DEEPSEEK_ENABLED:'true',DEEPSEEK_MODEL:'deepseek-chat',DEEPSEEK_API_KEY:'synthetic-server-secret'};
+(globalThis as any).Deno={env:{get:(k:string)=>env[k]},serve:(h:any)=>handler=h};
+globalThis.fetch=async(url:any,opts:any)=>{calls.push({url:String(url),opts});if(String(url).endsWith('zy_session'))return new Response('{}');if(String(url).endsWith('zy_ai_reserve'))return new Response('{}',{status:quota?200:429});const content=JSON.parse(opts.body).messages[1].content;assert(!content.includes('PRIVATE'));return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({matchProfile:{intents:[{index:0,category:'cleaning',evidence:'清洁'}],history:[]}})}}]}))};
+await import('../supabase/functions/recognize-order/index.ts');
+const input={intents:['清洁'],history:[],certificates:'',name:'PRIVATE-NAME',phone:'PRIVATE-PHONE',employer:'PRIVATE-EMPLOYER'};
+const invoke=()=>handler(new Request('https://edge.example',{method:'POST',headers:{origin:'https://site.example',authorization:'Bearer synthetic'},body:JSON.stringify({action:'match-profile',kind:'worker',input})}));
+assert.equal((await invoke()).status,200);assert.equal(calls.filter(c=>c.url.includes('deepseek.com')).length,1);quota=false;assert.equal((await invoke()).status,429);assert.equal(calls.filter(c=>c.url.includes('deepseek.com')).length,1);
+assert(!JSON.stringify(matchInput(input,'worker')).includes('PRIVATE'));
+assert.equal(validateProfile({matchProfile:{category:'invented',evidence:'清洁'}},{title:'清洁'},'order'),null);
+assert.equal(validateProfile({matchProfile:{category:'cleaning',evidence:'编造'}},{title:'清洁'},'order'),null);
+assert.equal(validateProfile({matchProfile:{category:'cleaning',evidence:'清洁',requirements:{height:{value:190,operator:'minimum',evidence:'身高155'}}}},{title:'清洁',requirements:'身高155'},'order')?.requirements.height,null);
+assert(categoryCodes.includes('hotel_housekeeping'));
+console.log('PASS: mocked classification endpoint, server allowlist, evidence/types, auth quota reservation and no secret exposure');

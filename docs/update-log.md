@@ -1,3 +1,11 @@
+## Experience-first worker-to-job matching
+
+- Implemented the November 9 replacement task: hard gender/age/related-history gates; best plus quarter-second experience with duration/recency/Hong Kong factors; equal observed-condition average; 10/7/5 preference bonuses; 70/30 totals and same-category high-grade requirement. Languages do not cap grades. Missing history requests completion.
+- Added matching navigation, worker-row/save-success entries, desktop linked results/profile, tablet disclosure, mobile tabs, company-only copy, search/ranges/filters, translated evidence and missing-data notices. Sync retains selection; caches are bounded and memory-only; unsaved registration guards remain.
+- Added allowlisted, evidence-checked AI classification through existing authenticated/quota-controlled recognition. Recognition returns classification within its existing request; changed worker classification inputs trigger at most one save-time call. Failures preserve save; stale profiles use rules and offer reanalysis. No business-field or price/publication-rule rewrite, consent text change, extra history snapshots or live-data backfill.
+- Added a bounded independent matchProfile validator migration for existing records; no new tables, privileges or policies. Deploy migration before Edge Function. Old hosted functions without classification capability continue rule-only matching.
+- Added synthetic scorer/AI/Edge/PostgreSQL and two-timezone browser checks, preserving existing form/workflow/list assertions. Full rules, month-count convention, actual example scores, responsive compromises and deployment limitations are documented in matching-rules.md.
+
 ## One China business timezone
 
 - Added cached browser/Node `ZYTime` helpers for China dates/parts/display, UTC-only day/month/week arithmetic and literal-date validation. All business date logic now uses this shared utility.
