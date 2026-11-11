@@ -89,6 +89,17 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.locator(f'[data-range={range_name}]').click()
                 assert page.locator('#state-chips b').first.inner_text()==str(count)
                 assert page.locator('.order-row').count()==count
+                if range_name=='week':
+                    group=page.locator('.order-date-group').first
+                    assert group.count()==1
+                    if group.evaluate('(e)=>e.open'):group.locator('summary').click()
+                    assert not group.evaluate('(e)=>e.open')
+                    assert group.locator('.order-row:visible').count()==0
+                    group.locator('summary').focus();page.keyboard.press('Enter')
+                    assert group.evaluate('(e)=>e.open')
+                    assert group.locator('.order-row:visible').count()==4
+                    page.evaluate('listRender()')
+                    assert page.locator('.order-date-group').first.evaluate('(e)=>e.open')
             page.locator('[data-filter-state=draft]').click();assert page.locator('.order-row').count()==1
             page.locator('[data-filter-state=""]').click()
             page.locator('[data-range=date]').click();assert page.locator('.calendar-panel').evaluate('(e)=>e.open')

@@ -56,7 +56,7 @@ function listRender(){
  const groups={};for(const o of matches)(groups[day(o.createdAt)]??=[]).push(o);
  $('#results').innerHTML=matches.length?Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(d=>{
   const heading=`<span data-user-content>${esc(d)}</span>${d===today()?' · <span>今天</span>':''}<span class="group-count">共 ${groups[d].length} 份</span>`;
-  return f.range==='all'?`<details class="order-date-group" ${expandedOrderDates.has(d)?'open':''}><summary data-date="${esc(d)}" onclick="expandedOrderDates[this.parentElement.open?'delete':'add'](this.dataset.date)">${heading}</summary><div class="order-date-content">${groups[d].map(card).join('')}</div></details>`:`<section class="order-date-section"><h2 class="order-group-heading">${heading}</h2>${groups[d].map(card).join('')}</section>`;
+  return ['all','week'].includes(f.range)?`<details class="order-date-group" ${expandedOrderDates.has(d)?'open':''}><summary data-date="${esc(d)}" onclick="expandedOrderDates[this.parentElement.open?'delete':'add'](this.dataset.date)">${heading}</summary><div class="order-date-content">${groups[d].map(card).join('')}</div></details>`:`<section class="order-date-section"><h2 class="order-group-heading">${heading}</h2>${groups[d].map(card).join('')}</section>`;
  }).join(''):'<div class="empty">暂无符合条件的劳务单<br><small>整理一份新劳务单，开始今天的工作。</small></div>';
  $('#list-count').textContent=`共 ${matches.length} 份`;updateReviewCount();refreshOrderDetail();if(activeRow){const next=[...document.querySelectorAll('.order-row')].find(row=>row.dataset.orderId===activeRow.dataset.orderId);next?.querySelector('.'+activeClass)?.focus({preventScroll:true})}
 }

@@ -1,3 +1,8 @@
+## Collapsible weekly date groups
+
+- The This Week range now uses the same accessible date disclosures and remembered expansion state as All Orders. Clicking or using Enter on a date header collapses/expands its records; rerendering preserves the choice.
+- Today and selected-date views, filtering, counts and detail selection remain unchanged. Added weekly disclosure browser regression coverage.
+
 ## Editable company fee notes
 
 - Generated fee notes are now editable in single, edit and batch forms. Explicit edits persist as a separate scalar customFeeNote and are used verbatim in company publication, including after reopening or changing salary.
