@@ -106,7 +106,7 @@
    document.documentElement.lang=language==='en'?'en':'zh-CN';document.title=language==='en'?'ZY Labour Management System':'卓亚港澳劳务系统';
    const date=ZYTime.headerDate(language);
    for(const id of ['date','login-date','business-date'])if(document.getElementById(id))document.getElementById(id).textContent=date+(id==='business-date'?'':' · '+translate('北京时间'));
-   document.querySelectorAll('[data-language-toggle]').forEach(button=>{button.textContent=language==='en'?'中文':'English';button.setAttribute('aria-label',language==='en'?'Switch interface to Chinese':'切换界面为英文');button.setAttribute('aria-pressed',String(language==='en'))});
+   document.querySelectorAll('[data-language-toggle]').forEach(button=>{if(button.hasAttribute('data-language-pair')){const markup=`<span class="${language==='zh'?'current':''}">中文</span><span aria-hidden="true">/</span><span class="${language==='en'?'current':''}">English</span>`;if(button.innerHTML!==markup)button.innerHTML=markup;}else button.textContent=language==='en'?'中文':'English';button.setAttribute('aria-label',language==='en'?'Switch interface to Chinese':'切换界面为英文');button.setAttribute('aria-pressed',String(language==='en'))});
    const loginTools=document.getElementById('login-language');if(loginTools)loginTools.hidden=!document.getElementById('login');
   }finally{observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','hidden']})}
  }

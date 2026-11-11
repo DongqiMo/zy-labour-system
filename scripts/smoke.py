@@ -72,6 +72,10 @@ with tempfile.TemporaryDirectory() as tmp:
             admin.evaluate('previewWorker(workers[0])');assert admin.locator('dialog[open]').count()==1
             admin.evaluate("document.querySelector('#modal').close()")
             # Every operation page translates, while entered business values remain untouched.
+            language_control=admin.locator('aside footer [data-language-pair]')
+            assert language_control.is_visible()
+            assert '中文' in language_control.inner_text() and 'English' in language_control.inner_text()
+            assert language_control.locator('.current').inner_text()=='中文'
             admin.locator('aside footer [data-language-toggle]').click()
             for target,heading in [('dashboard','Labour Orders'),('orders','Labour Orders'),('workers','Worker Registration'),('workerRecords','Registered Workers')]:
                 admin.evaluate('(target)=>go(target)',target)

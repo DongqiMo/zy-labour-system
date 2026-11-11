@@ -1,3 +1,8 @@
+## Explicit sidebar interface-language switch
+
+- The existing Chinese/English interface switch is now a full-width, clearly labelled 中文 / English control at the bottom of the desktop sidebar, with the active language emphasized and an accessible switch label.
+- Reused the existing translation and protected-business-content pipeline. No translation or rewrite of orders, source text, employer/worker data or custom notes is introduced; language changes do not save business records.
+
 ## Collapsible weekly date groups
 
 - The This Week range now uses the same accessible date disclosures and remembered expansion state as All Orders. Clicking or using Enter on a date header collapses/expands its records; rerendering preserves the choice.

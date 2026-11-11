@@ -55,3 +55,9 @@ body:has(#detail-overlay[open]){overflow:hidden}
 .match-dimension b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:639px){#match-workspace button{min-height:44px}}
 @media(min-width:1100px){.match-profile,.match-profile-shell{max-height:var(--match-profile-height,calc(100dvh - 120px))}.match-profile-shell{display:flex;flex-direction:column}}
+
+/* Persistent interface-language control at the bottom of the desktop sidebar. */
+aside footer .sidebar-language{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:44px;margin-top:14px;border:1px solid #50657f;background:transparent;color:#a7b7cb;border-radius:8px;font-size:13px}
+aside footer .sidebar-language .current{color:#fff;font-weight:600}
+aside footer .sidebar-language:hover{background:var(--sidebar-active);border-color:#92a7c0;color:#dce6f2}
+aside footer .sidebar-language:focus-visible{outline:2px solid #b7d7ff;outline-offset:3px}
