@@ -37,7 +37,8 @@
   // Fixed code/source/price are never supplied or changed by AI.
   order.code=analysis.order.code;order.raw=source;order.price=analysis.order.price;
   order.aiProvider=response.provider;order.aiModel=response.model;order.aiEvidence=JSON.stringify(facts);order.aiWarnings=JSON.stringify([...new Set(warnings)]);
-  if(response.matchProfile&&root.ZYMatching){const profile={...response.matchProfile,version:1,sourceHash:root.ZYMatching.sourceHash(order,'order'),by:'ai',at:new Date().toISOString()};if(root.ZYMatching.profileFor({...order,matchProfile:profile},'order').valid)order.matchProfile=profile;}
+  try{if(response.taxonomy&&root.ZYClassification)root.ZYClassification.configure(response.taxonomy);
+  if(response.matchProfile&&root.ZYMatching){const profile={...response.matchProfile,version:2,sourceHash:root.ZYMatching.sourceHash(order,'order'),by:response.matchProfile.by==='user'?'user':'ai',at:new Date().toISOString()};if(root.ZYMatching.profileFor({...order,matchProfile:profile},'order').valid)order.matchProfile=profile;}}catch{delete order.matchProfile}
   const review=P.reviewOrder(source,order);
   order.parsedSnapshot=JSON.stringify(Object.fromEntries(['code',...keys,'price'].map(key=>[key,order[key]||''])));
   return {...analysis,order,warnings:[...new Set([...review.warnings,...warnings])],sources:review.sources,unclassified:review.unclassified,conflicts:review.conflicts,ledger:review.ledger};
@@ -48,10 +49,10 @@
   try{return apply(analysis,await api('/api/recognize-order',{method:'POST',body:{source:analysis.order.raw}}))}
   catch{return {...analysis,warnings:[...analysis.warnings,'AI暂不可用，已保留规则识别结果']}}
  }
- async function analyzeMatch(record,kind,{quiet=false}={}){
-  const M=root.ZYMatching;if(!M)return null;if(M.profileFor(record,kind).valid)return record.matchProfile;
-  if(!await available()||!(await availability)?.classification){if(!quiet&&typeof toast==='function')toast('AI暂不可用，使用规则归类');return null}
-  let timer;try{const response=await Promise.race([api('/api/match-profile',{method:'POST',body:{kind,input:M.sourceFor(record,kind)}}),new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('timeout')),20000))]),profile={...response.matchProfile,version:1,sourceHash:M.sourceHash(record,kind),by:'ai',at:new Date().toISOString()};if(!response.matchProfile||!M.profileFor({...record,matchProfile:profile},kind).valid)throw Error('Invalid profile');return profile}
+ async function analyzeMatch(record,kind,{quiet=false,force=false}={}){
+  const M=root.ZYMatching;if(!M)return null;if(!force&&M.profileFor(record,kind).valid)return record.matchProfile;
+  if(!await available()||(await availability)?.classificationVersion!==2){if(!quiet&&typeof toast==='function')toast('AI暂不可用，使用规则归类');return null}
+  let timer;try{const response=await Promise.race([api('/api/match-profile',{method:'POST',body:{kind,input:M.sourceFor(record,kind),force}}),new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('timeout')),25000))]);if(response.taxonomy&&root.ZYClassification)root.ZYClassification.configure(response.taxonomy);const profile={...response.matchProfile,version:2,sourceHash:M.sourceHash(record,kind),by:response.matchProfile?.by==='user'?'user':'ai',at:new Date().toISOString()};if(!response.matchProfile||!M.profileFor({...record,matchProfile:profile},kind).valid)throw Error('Invalid profile');return profile}
   catch{if(!matchWarningShown&&typeof toast==='function'){matchWarningShown=true;toast('AI归类未完成或额度不足，使用规则归类')}return null}finally{clearTimeout(timer)}
  }
  root.ZYAI={enhance,apply,reset,analyzeMatch};

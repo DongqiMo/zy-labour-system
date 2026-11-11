@@ -99,7 +99,7 @@ def validate_id(value):
 def validate_match_profile(value):
     if value is None:
         return
-    if not isinstance(value, dict) or value.get('version') != 1 or value.get('by') not in ('ai', 'rules') or not isinstance(value.get('sourceHash'), str) or len(json.dumps(value)) > 16000:
+    if not isinstance(value, dict) or value.get('version') not in (1, 2) or value.get('by') not in ('ai', 'rules', 'user') or not isinstance(value.get('sourceHash'), str) or len(json.dumps(value)) > 24000:
         raise APIError(400, '岗位归类字段无效')
 
 
@@ -241,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
             elif method == 'GET':
                 if path=='/config.js':
                     return self.reply(200,b"window.ZY_CONFIG={provider:'sqlite'};",content_type='text/javascript; charset=utf-8')
-                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/worker-registration.js':'worker-registration.js', '/workspace-theme.css':'workspace-theme.css', '/worker-registration.css':'worker-registration.css', '/worker-registration-template.png':'worker-registration-template.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/recognition-archive.js':'recognition-archive.js', '/ai-recognition.js':'ai-recognition.js', '/job-categories.js':'job-categories.js','/matching.js':'matching.js','/match-view.js':'match-view.js','/business-time.js':'business-time.js','/order-list.js':'order-list.js','/workflow-guards.js':'workflow-guards.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
+                files = {'/': 'index.html', '/index.html': 'index.html', '/app.webmanifest': 'app.webmanifest', '/sw.js': 'sw.js', '/icon.svg': 'icon.svg', '/logo.png': 'logo.png', '/worker-registration.js':'worker-registration.js', '/workspace-theme.css':'workspace-theme.css', '/worker-registration.css':'worker-registration.css', '/worker-registration-template.png':'worker-registration-template.png', '/order-recognition.js':'order-recognition.js', '/i18n.js':'i18n.js', '/batch-editor.js':'batch-editor.js', '/order-parser.js':'order-parser.js', '/recognition-archive.js':'recognition-archive.js', '/ai-recognition.js':'ai-recognition.js', '/job-categories.js':'job-categories.js','/job-classification.js':'job-classification.js','/classification-admin.js':'classification-admin.js','/matching.js':'matching.js','/match-view.js':'match-view.js','/business-time.js':'business-time.js','/order-list.js':'order-list.js','/workflow-guards.js':'workflow-guards.js', '/shared.js': 'shared.js', '/supabase-adapter.js':'supabase-adapter.js'}
                 if path not in files:
                     raise APIError(404, '找不到页面')
                 target = ROOT / 'dist' / files[path]

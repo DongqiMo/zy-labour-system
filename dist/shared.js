@@ -10,7 +10,7 @@ async function api(path,{method='GET',body}={}){
   return data;
 }
 function loginScreen(message=''){
- window.ZYAI?.reset();window.ZYMatchUI?.reset();
+ window.ZYAI?.reset();window.ZYMatchUI?.reset();window.ZYClassAdmin?.reset();
   sessionUser=null;csrf='';orders=[];workers=[];worker={};editing=null;batch=[];
   hideDetailOverlay();closeOrderMenu();selectedOrderId=null;orderListReturn=null;$('#modal').close();$('#modal').innerHTML='';$('aside').hidden=true;$('main').hidden=true;
   $('#login')?.remove();const box=document.createElement('section');box.id='login';box.style='max-width:440px;margin:12vh auto;padding:30px;background:#fff';
@@ -18,7 +18,7 @@ function loginScreen(message=''){
   document.body.append(box);$('#loginForm').onsubmit=async event=>{event.preventDefault();const button=box.querySelector('button');button.disabled=true;try{const form=new FormData(event.target);const data=await api('/api/login',{method:'POST',body:{username:form.get('username'),password:form.get('password')}});await enterWorkspace(data)}catch(e){$('#loginError').textContent=e.message}finally{button.disabled=false}};
 }
 async function enterWorkspace(data){
- window.ZYMatchUI?.reset();
+ window.ZYMatchUI?.reset();window.ZYClassAdmin?.reset();
   sessionUser=data.user;csrf=data.csrf;
   let result=await api('/api/orders');
   const repaired=ZYRecognitionArchive.cleanOrders(ZYOrderParser.repairLegacyOrders(result.orders));
@@ -46,7 +46,7 @@ async function disableUser(id){if(!confirm('停用此账号并立即撤销其登
 async function performSync(){
  if(!sessionUser||saving||document.hidden||$('#modal').open||!['dashboard','orders','workerRecords','match'].includes(view))return;
  const syncView=view,syncUser=sessionUser.id;
- try{const data=await api('/api/orders');if(saving||view!==syncView||sessionUser?.id!==syncUser||$('#modal').open)return;const changed=data.revision!==revision;orders=data.orders;revision=data.revision;updateReviewCount();if(changed&&['dashboard','orders'].includes(view))render();if(view==='workerRecords')await recordsView();if(view==='match'){await loadWorkers();if(view!==syncView||sessionUser?.id!==syncUser)return;await matchView({load:false,sync:true})}lastSync=Date.now();const maintenance=await api('/api/maintenance');if($('#syncStatus'))$('#syncStatus').textContent=maintenance.readOnly?'维护中 · 只读，已暂停写入':'团队资料已同步'}catch(e){if($('#syncStatus'))$('#syncStatus').textContent='连接中断，正在重试；请勿关闭未保存表单'}
+ try{const data=await api('/api/orders');if(saving||view!==syncView||sessionUser?.id!==syncUser||$('#modal').open)return;const changed=data.revision!==revision;orders=data.orders;revision=data.revision;updateReviewCount();if(changed&&['dashboard','orders'].includes(view))render();if(view==='workerRecords')await recordsView();if(view==='match'){await loadWorkers();await loadJobTaxonomy(true);if(view!==syncView||sessionUser?.id!==syncUser)return;await matchView({load:false,sync:true})}lastSync=Date.now();const maintenance=await api('/api/maintenance');if($('#syncStatus'))$('#syncStatus').textContent=maintenance.readOnly?'维护中 · 只读，已暂停写入':'团队资料已同步'}catch(e){if($('#syncStatus'))$('#syncStatus').textContent='连接中断，正在重试；请勿关闭未保存表单'}
 }
 async function migrateLocal(){
  let localOrders=[];try{localOrders=JSON.parse(localStorage.getItem(key)||'[]')}catch{return toast('旧订单格式异常，未上传')}

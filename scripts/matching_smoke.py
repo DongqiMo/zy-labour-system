@@ -8,6 +8,7 @@ from server.app import make_server,create_user
 
 worker={'id':'match-main','name':'李秀兰','gender':'女','birthDate':'1984-06-12','desiredJob1':'清洁','desiredJob2':'酒店客房','desiredJob3':'厨房帮工','cantonese':'流利','mandarin':'良好','english':'略懂','desiredSalary':'HKD14000','certificates':'健康证','phone':'13800005678','hometown':'广东江门','health':'健康良好','education':'初中','idNumber':'PRIVATE-ID-MARKER','idValidity':'PRIVATE-VALIDITY-MARKER','idAddress':'PRIVATE-ID-ADDRESS','currentAddress':'PRIVATE-CURRENT-ADDRESS','alternateContact':'PRIVATE-ALTERNATE','permit':'PRIVATE-PERMIT','workHistory':[{'period':'2019.03–2023.08','employer':'香港某酒店','position':'客房清洁员','duties':'整理客房和清洁'},{'period':'2015.06–2019.02','employer':'江门某酒楼','position':'厨房帮工','duties':'切配洗碗'},{'period':'2010.09–2015.05','employer':'江门某工厂','position':'包装工','duties':'包装装箱'}]}
 jobs=[['match-hotel','酒店客房服务员','女','25-45岁','粤语','HKD17500'],['match-clean','清洁员','女','30-55岁','粤语流利、简单英语','HKD14500'],['match-kitchen','厨房帮工','男女不限','30-50岁','普通话流利','HKD15000'],['match-warehouse','仓库理货员','男女不限','20-50岁','','MOP15000'],['match-chef','点心厨师','男','50岁内','','HKD18920'],['match-office','电脑操作员','女','35岁以下','','HKD14000']]
+jobs.append(['match-manual','合成稀有协调岗','男女不限','20-50岁','','HKD15000'])
 
 with tempfile.TemporaryDirectory() as tmp:
     server=make_server(Path(tmp)/'matching.sqlite3',port=0,secure=False)
@@ -52,11 +53,15 @@ with tempfile.TemporaryDirectory() as tmp:
                 assert page.locator('#match-worker-options button').count()==1
                 assert '13800005678' not in page.locator('#match-workspace').inner_text()
                 page.locator('#match-worker-options button').click();page.wait_for_selector('[data-match-order=match-hotel]')
-                assert page.locator('[data-match-level] b').all_text_contents()==['4','3','0','1']
-                assert page.locator('.match-entry').count()==4
+                assert page.locator('[data-match-level] b').all_text_contents()==['4','2','1','0','1']
+                assert page.locator('.match-entry').count()==3
+                assert page.locator('.match-manual-row').count()==1
+                assert page.locator('.match-manual-row .match-score').count()==0
+                page.locator('[data-match-level=manual]').click();assert page.locator('.match-entry').count()==0 and page.locator('.match-manual-row').count()==1
+                page.locator('[data-match-level=""]').click()
                 assert not page.locator('[data-match-order=match-review-only]').count() and not page.locator('[data-match-order=match-draft-only]').count()
                 assert not page.locator('.match-excluded').evaluate('(e)=>e.open')
-                assert '2张' in page.locator('.match-excluded summary').inner_text()
+                assert '3张' in page.locator('.match-excluded summary').inner_text()
                 page.locator('.match-excluded summary').click();assert '要求男性，劳工为女性' in page.locator('.match-excluded').inner_text()
                 assert '要求35岁以下，劳工42岁' in page.locator('.match-excluded').inner_text()
                 # Only the copy action uses company publication, never worker fields.
@@ -76,7 +81,7 @@ with tempfile.TemporaryDirectory() as tmp:
                 assert page.locator('.match-breakdown').count()==1
                 assert page.locator('[data-history-index="1"]').get_attribute('class').endswith('matched')
                 page.locator('[data-match-order=match-kitchen] .match-order-open').click();assert page.locator('.match-profile .matched').count()==0
-                page.locator('[data-match-level=high]').click();assert page.locator('.match-entry').count()==3
+                page.locator('[data-match-level=high]').click();assert page.locator('.match-entry').count()==2
                 assert page.evaluate('matchState.calculations')==calculations
                 page.locator('[data-match-level=""]').click()
                 # DOM excludes all restricted fields, and full phone is an explicit reveal.
@@ -149,10 +154,10 @@ with tempfile.TemporaryDirectory() as tmp:
                 page.evaluate("selectMatchWorker('match-excluded')");assert page.locator('.match-excluded').evaluate('(e)=>e.open')
                 assert '没有符合的岗位' in page.locator('.match-results').inner_text()
                 page.evaluate("selectMatchWorker('match-main')")
-                results=page.evaluate("matchBundle().results.filter(r=>!r.excluded).map(r=>({id:r.orderId,score:r.score,level:r.level}))")
+                results=page.evaluate("matchBundle().results.filter(r=>!r.excluded&&!r.manual).map(r=>({id:r.orderId,score:r.score,level:r.level}))")
                 snapshots.append({'scores':results,'boundaryAge':boundary_age,'currentMonths':current_months})
                 # Cached AI metadata is independent of business fields and expires after a relevant edit.
-                page.evaluate("""async()=>{const w=workers.find(w=>w.id==='match-main');window.originalMatchWorker={...w};await dbWrite('put',{...w,matchProfile:{version:1,sourceHash:ZYMatching.sourceHash(w,'worker'),by:'ai',intents:[],history:[{index:0,category:'hotel_housekeeping',evidence:'客房清洁员'}]}});await performSync();matchState.openOrderId='match-hotel';renderMatchPage()}""")
+                page.evaluate("""async()=>{const w=workers.find(w=>w.id==='match-main');window.originalMatchWorker={...w};await dbWrite('put',{...w,matchProfile:{version:2,sourceHash:ZYMatching.sourceHash(w,'worker'),by:'ai',intents:[],certificates:[],history:[{index:0,major:'hotel_cleaning',subcategory_id:'seed:housekeeping',evidence:'客房清洁员'}]}});await performSync();matchState.openOrderId='match-hotel';renderMatchPage()}""")
                 assert 'AI' in page.locator('.match-breakdown').inner_text()
                 page.evaluate("""async()=>{const w=workers.find(w=>w.id==='match-main');await dbWrite('put',{...w,workHistory:w.workHistory.map((h,i)=>i===0?{...h,duties:h.duties+'，合成更新'}:h)});await performSync()}""")
                 assert page.evaluate("ZYMatching.profileFor(workers.find(w=>w.id==='match-main'),'worker').by")=='rules'

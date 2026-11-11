@@ -140,3 +140,7 @@ The same authenticated assistance contract also supports DeepSeek, selected expl
 ## Recognition progress
 
 Single-entry Auto Organise shows a smooth simulated waiting percentage, explicitly labelled as animation rather than actual model progress. A bounded timer eases toward 95 percent while waiting; only an applied result reaches 100. Success, failure, discarded late results and detached views stop the timer. Repeated clicks stay disabled during requests. Reduced-motion preferences disable visual transitions. Both rule and AI duration checks accept Cantonese 个钟/個鐘 units without treating currency suffixes as hours.
+
+## V2 occupation-classification metadata
+
+Occupation classification is separate from fact extraction, publication and price calculation. `matchProfile` v2 stores a fixed major and shared subcategory IDs with literal evidence; it cannot supply scores or overwrite business fields. The optional classification in an existing recognition response adds no model request. Its separate classification reservation/cache failure drops classification metadata only, retaining validated recognition facts. Standalone classification uses its independent team quota and never calls `zy_ai_reserve`. Worker employer names are explicitly permitted classification clues; worker identity/contact/address/photo fields remain excluded. See `matching-rules.md` for taxonomy and deployment details.

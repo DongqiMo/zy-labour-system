@@ -1,3 +1,12 @@
+## V2 occupation classification and repair-role matching
+
+- Replaced the eleven closed occupation codes with eighteen broad majors plus a shared, mergeable subcategory dictionary. Added repair/electrical/mechanical, equipment, food service, beauty, automotive and aviation coverage; unknowns become Manual Judgment instead of false history exclusions.
+- Same resolved subcategory uses relevance 1; same major uses 0.6 and is capped at medium; occupational certificates contribute a synthetic 35-point experience at relevance 0.5. Broad matches cannot be excluded for short/old experience. Health certificates are not occupational evidence. Gender/age gates and 70/30/intent scoring remain.
+- Added shared normalized SHA-256 cache lookup, v2 profile invalidation, current merge resolution, administrator-assigned cache precedence and explicit employer-name allowlisting. AI uses fixed majors and extensible subcategory IDs/proposals, literal evidence checks, temperature zero and an independent atomic fifty-call daily team quota; DeepSeek and Gemini remain supported.
+- Added service-only dictionary/cache writes, member-only reads, administrator-only management and bounded revision-safe metadata backfill. Management shows coverage, dictionary edits/merges, manual assignments, title-only export and resumable twenty-item batches. Completed caches survive interrupted backfill.
+- Added synthetic scoring, service, PostgreSQL/RLS/quota and admin-browser regressions. Existing form/workflow tests remain; matching fixture expectations explicitly reflect the removal of cross-major adjacency and the new same-subcategory high-grade gate.
+- Hosted title inventory, Supabase deployment, real backfill and production coverage are not available from this environment without a deployment/account identity. A detailed release report records these outstanding checks; no production business data or real model call was used.
+
 ## Explicit sidebar interface-language switch
 
 - The existing Chinese/English interface switch is now a full-width, clearly labelled 中文 / English control at the bottom of the desktop sidebar, with the active language emphasized and an accessible switch label.
